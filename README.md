@@ -44,7 +44,7 @@ npm install -g expo-cli
 ### Step 3: Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/GuardianDurga.git
+git clone https://github.com/shubhamaher8/GuardianDurga.git
 cd GuardianDurga
 ```
 
