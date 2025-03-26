@@ -36,47 +36,55 @@ const Register = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Register</Text>
+      <View style={styles.formBox}>
+        <Text style={styles.title}>Get Started!</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        keyboardType="email-address"
-      />
-
-      <View style={styles.passwordContainer}>
         <TextInput
-          style={styles.passwordInput}
-          placeholder="Password"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry={!showPassword}
+          style={styles.input}
+          placeholder="Email"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
         />
+
+        <View style={styles.passwordContainer}>
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+          />
+          <TouchableOpacity
+            style={styles.showPasswordButton}
+            onPress={() => setShowPassword(!showPassword)}
+          >
+            <Text style={styles.showPasswordText}>
+              {showPassword ? 'Hide' : 'Show'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <TouchableOpacity style={styles.checkboxContainer}>
+          <Text style={styles.checkboxText}>I accept the <Text style={styles.link}>Terms of Service</Text> and <Text style={styles.link}>Privacy Policy</Text></Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
-          style={styles.showPasswordButton}
-          onPress={() => setShowPassword(!showPassword)}
+          style={styles.signUpButton}
+          onPress={signUpWithEmail}
+          disabled={loading}
         >
-          <Text style={styles.showPasswordText}>
-            {showPassword ? 'Hide' : 'Show'}
-          </Text>
+          <Text style={styles.signUpText}>{loading ? 'Registering...' : 'Sign Up'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.loginLink}
+          onPress={() => navigation.navigate('Login')}
+        >
+          <Text style={styles.loginLinkText}>Already registered? <Text style={styles.link}>Sign In</Text></Text>
         </TouchableOpacity>
       </View>
-
-      <Button
-        title={loading ? 'Registering...' : 'Register'}
-        onPress={signUpWithEmail}
-        disabled={loading}
-      />
-
-      <TouchableOpacity
-        style={styles.loginLink}
-        onPress={() => navigation.navigate('Login')}
-      >
-        <Text style={styles.loginLinkText}>Already have an account? Login</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -84,9 +92,21 @@ const Register = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     justifyContent: 'center',
-    backgroundColor: '#f5f5f5',
+    alignItems: 'center',
+    backgroundColor: '#f3f4f6',
+  },
+  formBox: {
+    width: '90%',
+    maxWidth: 400,
+    padding: 20,
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 5 },
+    shadowRadius: 10,
+    elevation: 5,
   },
   title: {
     fontSize: 24,
@@ -126,13 +146,38 @@ const styles = StyleSheet.create({
     color: '#007bff',
     fontWeight: 'bold',
   },
-  loginLink: {
-    marginTop: 20,
+  checkboxContainer: {
+    marginVertical: 10,
     alignItems: 'center',
   },
-  loginLinkText: {
+  checkboxText: {
+    fontSize: 14,
+    textAlign: 'center',
+    color: '#666',
+  },
+  link: {
     color: '#007bff',
     fontWeight: 'bold',
+  },
+  signUpButton: {
+    backgroundColor: '#5a67d8',
+    padding: 12,
+    borderRadius: 5,
+    alignItems: 'center',
+    marginVertical: 10,
+  },
+  signUpText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  loginLink: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
+  loginLinkText: {
+    color: '#666',
+    fontSize: 14,
   },
 });
 
