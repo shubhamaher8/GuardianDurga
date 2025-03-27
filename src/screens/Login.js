@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
-import { View, TextInput, TouchableOpacity, Text, Image, StyleSheet } from 'react-native';
+import { 
+  View, TextInput, TouchableOpacity, Text, StyleSheet, Image, Platform, Dimensions 
+} from 'react-native';
 import { supabase } from '../../supabase';
+
+const { width } = Dimensions.get('window');
 
 const Login = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   async function signInWithEmail() {
     if (email === '' || password === '') {
@@ -16,10 +19,7 @@ const Login = ({ navigation }) => {
 
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: password,
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
         alert(error.message);
@@ -35,42 +35,48 @@ const Login = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      <Image source={require('./DAI.webp')} style={styles.sideImage} />
-      
-      <View style={styles.boxContainer}>
-        <Text style={styles.heading}>Guardian Durga</Text>
-        <Text style={styles.welcomeText}>Welcome to Guardian Durga, Your Safety Matters.</Text>
-        
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
+      {/* Circular Profile Image */}
+      <Image 
+        source={{ uri: 'https://i.pravatar.cc/200' }} 
+        style={styles.profileImage} 
+      />
 
-        <View style={styles.passwordContainer}>
-          <TextInput
-            style={styles.passwordInput}
-            placeholder="Password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry={!showPassword}
-          />
-          <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-            <Text style={styles.showPasswordText}>{showPassword ? 'Hide' : 'Show'}</Text>
-          </TouchableOpacity>
-        </View>
+      <Text style={styles.welcomeText}>Welcome Back</Text>
+      <Text style={styles.subText}>Login to your account</Text>
 
-        <TouchableOpacity style={styles.loginButton} onPress={signInWithEmail} disabled={loading}>
-          <Text style={styles.loginButtonText}>{loading ? 'Logging in...' : 'Login'}</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Username"
+        value={email}
+        onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
+      />
+
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        value={password}
+        onChangeText={setPassword}
+        secureTextEntry={true}
+      />
+
+      <View style={styles.row}>
+        <TouchableOpacity>
+          <Text style={styles.rememberMe}>Remember me</Text>
         </TouchableOpacity>
-
-        <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-          <Text style={styles.registerText}>Don't have an account? Register</Text>
+        <TouchableOpacity>
+          <Text style={styles.forgotPassword}>Forgot Password?</Text>
         </TouchableOpacity>
       </View>
+
+      <TouchableOpacity style={styles.loginButton} onPress={signInWithEmail} disabled={loading}>
+        <Text style={styles.loginButtonText}>{loading ? 'Logging in...' : 'LOGIN'}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+        <Text style={styles.registerText}>Don't have an account? <Text style={styles.signUp}>Sign up</Text></Text>
+      </TouchableOpacity>
     </View>
   );
 };
@@ -78,76 +84,61 @@ const Login = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f9f9f9',
-  },
-  sideImage: {
-    width: '40%',
-    height: '100%',
-    resizeMode: 'cover',
-  },
-  boxContainer: {
-    width: '50%',
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
     alignItems: 'center',
+    backgroundColor: '#4267B2',
+    paddingHorizontal: 20,
   },
-  heading: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    color: '#333',
+  profileImage: {
+    width: 120, // Increased size
+    height: 120,
+    borderRadius: 60, // Circular shape
+    marginBottom: 20,
+    borderWidth: 3,
+    borderColor: '#fff',
   },
   welcomeText: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 5,
+  },
+  subText: {
     fontSize: 16,
-    color: '#666',
-    marginVertical: 10,
-    textAlign: 'center',
+    color: '#ddd',
+    marginBottom: 20,
   },
   input: {
-    width: '100%',
+    width: Platform.OS === 'web' ? '80%' : '100%',
     borderWidth: 1,
     borderColor: '#ddd',
-    borderRadius: 5,
-    padding: 12,
-    marginVertical: 8,
+    borderRadius: 8,
+    padding: Platform.OS === 'web' ? 10 : 15,
+    marginBottom: 10,
     backgroundColor: '#fff',
-    fontSize: 16,
+    fontSize: Platform.OS === 'web' ? 14 : 16,
   },
-  passwordContainer: {
+  row: {
+    width: '80%',
     flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 5,
-    marginVertical: 8,
-    backgroundColor: '#fff',
-    width: '100%',
+    justifyContent: 'space-between',
+    marginBottom: 15,
   },
-  passwordInput: {
-    flex: 1,
-    padding: 12,
-    fontSize: 16,
+  rememberMe: {
+    color: '#fff',
+    fontSize: 14,
   },
-  showPasswordText: {
-    color: '#007bff',
-    fontWeight: 'bold',
-    paddingHorizontal: 10,
+  forgotPassword: {
+    color: '#FFD700',
+    fontSize: 14,
   },
   loginButton: {
-    backgroundColor: '#ff4d4d',
+    backgroundColor: '#1C1C1C',
     padding: 12,
-    borderRadius: 5,
-    marginTop: 10,
-    width: '100%',
+    borderRadius: 8,
+    width: '80%',
     alignItems: 'center',
+    marginTop: 10,
   },
   loginButtonText: {
     color: '#fff',
@@ -156,7 +147,11 @@ const styles = StyleSheet.create({
   },
   registerText: {
     marginTop: 20,
-    color: '#007bff',
+    color: '#fff',
+    fontSize: 14,
+  },
+  signUp: {
+    color: '#FFD700',
     fontWeight: 'bold',
   },
 });

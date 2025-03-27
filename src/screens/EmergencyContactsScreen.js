@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import * as Contacts from 'expo-contacts';
+import { Ionicons } from '@expo/vector-icons';
 
 const EmergencyContactsScreen = ({ navigation }) => {
-  // State to store emergency contacts
   const [emergencyContacts, setEmergencyContacts] = useState([]);
 
-  // Fetch emergency contacts (mock data for now)
   const fetchEmergencyContacts = async () => {
     try {
       const { status } = await Contacts.requestPermissionsAsync();
@@ -25,7 +24,6 @@ const EmergencyContactsScreen = ({ navigation }) => {
     }
   };
 
-  // Add a mock contact for demonstration
   const addMockContact = () => {
     setEmergencyContacts([
       ...emergencyContacts,
@@ -35,43 +33,44 @@ const EmergencyContactsScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
+      {/* Back Arrow Above Title */}
+      <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backArrow}>
+        <Ionicons name="arrow-back" size={24} color="black" />
+      </TouchableOpacity>
+
       <View style={styles.header}>
-        <Text style={styles.title}>EMERGENCY CONTACTS</Text>
+        <Text style={styles.title}>Emergency Contacts</Text>
         <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
+          <Ionicons name="settings-outline" size={24} color="black" />
         </TouchableOpacity>
       </View>
 
-      {/* Profile ID */}
       <View style={styles.profileIdContainer}>
         <Text style={styles.profileIdText}>Profile ID</Text>
         <Text style={styles.profileIdNumber}>XXXX XXXX XX4473</Text>
         <Text style={styles.verifiedText}>Verified</Text>
       </View>
 
-      {/* Contact List */}
-      <View style={styles.contactList}>
+      <ScrollView style={styles.contactList}>
         {emergencyContacts.map((contact, index) => (
           <View key={index} style={styles.contactCard}>
             <View style={styles.contactDetails}>
               <Text style={styles.contactName}>{contact.name}</Text>
-              <Text style={styles.contactPhone}>XXXX XXXX XXXX</Text>
+              <Text style={styles.contactPhone}>{contact.phone}</Text>
             </View>
             <TouchableOpacity style={styles.editButton}>
               <Text style={styles.editButtonText}>Edit</Text>
             </TouchableOpacity>
           </View>
         ))}
-      </View>
+      </ScrollView>
 
-      {/* Add Contacts */}
       <TouchableOpacity style={styles.addContactButton} onPress={addMockContact}>
-        <Text style={styles.addContactText}>+ Add Contacts</Text>
+        <Text style={styles.addContactText}>+ Add Contact</Text>
       </TouchableOpacity>
 
-      {/* AI Durga Button */}
       <TouchableOpacity style={styles.aiDurgaButton} onPress={() => navigation.navigate('Chatbot')}>
-        <Text style={styles.aiDurgaText}>AI DURGA</Text>
+        <Ionicons name="chatbubbles" size={24} color="white" />
       </TouchableOpacity>
     </View>
   );
@@ -80,31 +79,32 @@ const EmergencyContactsScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9E79F',
+    backgroundColor: '#FFFFFF',
     padding: 20,
+  },
+  backArrow: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    zIndex: 10,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginTop: 40, // Adjusted for space after back arrow
     marginBottom: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#000000',
-  },
-  settingsIcon: {
-    width: 30,
-    height: 30,
+    color: '#333',
   },
   profileIdContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F5F5',
     borderRadius: 10,
-    padding: 10,
+    padding: 15,
     marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
   },
   profileIdText: {
@@ -113,27 +113,24 @@ const styles = StyleSheet.create({
   },
   profileIdNumber: {
     fontSize: 14,
+    marginVertical: 5,
   },
   verifiedText: {
     fontSize: 14,
-    color: '#008000',
+    color: '#28A745',
+    fontWeight: 'bold',
   },
   contactList: {
     marginBottom: 20,
   },
   contactCard: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F5F5',
     borderRadius: 10,
-    padding: 10,
+    padding: 15,
     marginBottom: 10,
-  },
-  contactAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
   },
   contactDetails: {
     flex: 1,
@@ -144,40 +141,45 @@ const styles = StyleSheet.create({
   },
   contactPhone: {
     fontSize: 14,
+    color: '#555',
   },
   editButton: {
-    paddingHorizontal: 10,
+    backgroundColor: '#FFA500',
+    paddingHorizontal: 15,
     paddingVertical: 5,
     borderRadius: 5,
-    backgroundColor: '#FFC107',
   },
   editButtonText: {
     fontSize: 14,
-    color: '#000000',
+    color: '#FFF',
+    fontWeight: 'bold',
   },
   addContactButton: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#007BFF',
     borderRadius: 10,
-    padding: 10,
-    marginTop: 20,
+    padding: 12,
     alignItems: 'center',
+    marginBottom: 20,
   },
   addContactText: {
     fontSize: 16,
     fontWeight: 'bold',
+    color: '#FFF',
   },
   aiDurgaButton: {
     position: 'absolute',
     bottom: 20,
     right: 20,
-    backgroundColor: '#FFC107',
+    backgroundColor: '#007BFF',
     borderRadius: 50,
-    padding: 10,
-  },
-  aiDurgaText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000000',
+    width: 60,
+    height: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
 });
 
