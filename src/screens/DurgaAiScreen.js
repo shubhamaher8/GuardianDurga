@@ -1,124 +1,354 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState, useRef, useEffect } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  TouchableOpacity, 
+  TextInput, 
+  FlatList, 
+  KeyboardAvoidingView, 
+  Platform, 
+  SafeAreaView,
+  StatusBar,
+  ActivityIndicator
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import Theme from '../theme/theme';
 
-const HomeScreen = ({ navigation }) => {
-return (
-<View style={styles.container}>
-{/* Header Section */}
-<View style={styles.header}>
-<Text style={styles.title}>Guardian Durga</Text>
-<Text style={styles.subtitle}>Safety In Your Hands</Text>
-</View>
+const OPENROUTER_API_KEY = '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';
+const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-{/* Welcome Message */}
-<Text style={styles.welcomeMessage}>Hi Username,</Text>
+const DurgaAiScreen = ({ navigation }) => {
+  const [messages, setMessages] = useState([
+    {
+      id: '1',
+      text: 'Hello! I\'m Durga AI, your personal safety assistant. How can I help you today?',
+      sender: 'bot',
+      timestamp: new Date(),
+    },
+  ]);
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const flatListRef = useRef(null);
 
-{/* Panic Button */}
-<TouchableOpacity style={styles.panicButton} onPress={() => navigation.navigate('PanicConfirmation')}>
-<Text style={styles.panicButtonText}>Panic Mode</Text>
-</TouchableOpacity>
+  // Sample safety suggestions
+  const suggestions = [
+    'What should I do if I feel unsafe walking home?',
+    'How do I create a safety plan?',
+    'Tips for staying safe while traveling alone',
+    'How to respond to harassment in public?',
+    'Emergency services in my area'
+  ];
 
-{/* Quick Access Buttons */}
-<View style={styles.quickAccessContainer}>
-{/* Emergency Contact */}
-<TouchableOpacity style={styles.quickAccessButton} onPress={() => navigation.navigate('EmergencyContacts')}>
-<Text style={styles.buttonText}>Emergency Contact</Text>
-</TouchableOpacity>
+  const sendMessage = async (text) => {
+    if (!text.trim()) return;
+    
+    // Add user message
+    const userMessage = {
+      id: Date.now().toString(),
+      text: text,
+      sender: 'user',
+      timestamp: new Date(),
+    };
+    
+    setMessages(prevMessages => [...prevMessages, userMessage]);
+    setInputText('');
+    setIsLoading(true);
 
-{/* Report Incident */}
-<TouchableOpacity style={styles.quickAccessButton} onPress={() => navigation.navigate('IncidentReporting')}>
-<Text style={styles.buttonText}>Report Incident</Text>
-</TouchableOpacity>
+    try {
+      // OpenRouter API call
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+          'HTTP-Referer': 'https://guardiandurga.com', // Replace with your app domain
+          'X-Title': 'Guardian Durga Safety Assistant'
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3-opus:beta', // You can change the model
+          messages: [
+            { role: 'system', content: 'You are Durga AI, a personal safety assistant developed for the Guardian Durga app. Your primary goal is to provide helpful, accurate information related to personal safety, emergency response, self-defense, mental health during crisis, and related topics. Be concise, empathetic, and focus on practical advice that could help in real situations. Never encourage violence or illegal activities. If someone appears to be in immediate danger, strongly encourage them to contact emergency services immediately.' },
+            ...messages.map(msg => ({
+              role: msg.sender === 'user' ? 'user' : 'assistant',
+              content: msg.text
+            })),
+            { role: 'user', content: text }
+          ],
+          temperature: 0.7,
+          max_tokens: 500
+        }),
+      });
 
-{/* Fake Calling */}
-<TouchableOpacity style={styles.quickAccessButton} onPress={() => navigation.navigate('FakeCall')}>
-<Text style={styles.buttonText}>Fake Calling</Text>
-</TouchableOpacity>
+      const data = await response.json();
+      
+      // Process the response
+      if (data.choices && data.choices[0] && data.choices[0].message) {
+        const botMessage = {
+          id: (Date.now() + 1).toString(),
+          text: data.choices[0].message.content,
+          sender: 'bot',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prevMessages => [...prevMessages, botMessage]);
+      } else {
+        // Handle error or unexpected response
+        const errorMessage = {
+          id: (Date.now() + 1).toString(),
+          text: 'I apologize, but I encountered an issue while processing your request. Please try again later.',
+          sender: 'bot',
+          timestamp: new Date(),
+        };
+        
+        setMessages(prevMessages => [...prevMessages, errorMessage]);
+      }
+    } catch (error) {
+      console.error('Error calling AI API:', error);
+      
+      // Add error message
+      const errorMessage = {
+        id: (Date.now() + 1).toString(),
+        text: 'I apologize, but I encountered an error. Please check your connection and try again.',
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prevMessages => [...prevMessages, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-{/* Safety Tips */}
-<TouchableOpacity style={styles.quickAccessButton} onPress={() => navigation.navigate('SafetyTips')}>
-<Text style={styles.buttonText}>Safety Tips</Text>
-</TouchableOpacity>
-</View>
+  const handleSuggestionPress = (suggestion) => {
+    sendMessage(suggestion);
+  };
 
-{/* Chatbot (Durga) */}
-<TouchableOpacity style={styles.durgaButton} onPress={() => navigation.navigate('Chatbot')}>
-<Text style={styles.durgaButtonText}>Durga AI</Text>
-</TouchableOpacity>
-</View>
-);
+  useEffect(() => {
+    // Scroll to the bottom when messages change
+    if (flatListRef.current && messages.length > 0) {
+      flatListRef.current.scrollToEnd({ animated: true });
+    }
+  }, [messages]);
+
+  const renderMessage = ({ item }) => {
+    const isUser = item.sender === 'user';
+    
+    return (
+      <View style={[styles.messageContainer, isUser ? styles.userMessageContainer : styles.botMessageContainer]}>
+        {!isUser && (
+          <View style={styles.botAvatar}>
+            <Ionicons name="shield" size={24} color={Theme.colors.primary} />
+          </View>
+        )}
+        
+        <View style={[styles.messageBubble, isUser ? styles.userMessageBubble : styles.botMessageBubble]}>
+          <Text style={[styles.messageText, isUser ? styles.userMessageText : styles.botMessageText]}>
+            {item.text}
+          </Text>
+        </View>
+        
+        {isUser && (
+          <View style={styles.userAvatar}>
+            <Ionicons name="person" size={24} color={Theme.colors.surface} />
+          </View>
+        )}
+      </View>
+    );
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={Theme.colors.background} />
+      
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoidingView}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        <View style={styles.chatContainer}>
+          {/* Chat Messages */}
+          <FlatList
+            ref={flatListRef}
+            data={messages}
+            renderItem={renderMessage}
+            keyExtractor={(item) => item.id}
+            contentContainerStyle={styles.messagesList}
+            showsVerticalScrollIndicator={false}
+          />
+          
+          {/* Suggestions */}
+          {messages.length <= 2 && (
+            <View style={styles.suggestionsContainer}>
+              <Text style={styles.suggestionsTitle}>Suggested Questions</Text>
+              <View style={styles.suggestionsList}>
+                {suggestions.map((suggestion, index) => (
+                  <TouchableOpacity
+                    key={index}
+                    style={styles.suggestionItem}
+                    onPress={() => handleSuggestionPress(suggestion)}
+                  >
+                    <Text style={styles.suggestionText}>{suggestion}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+          
+          {/* Input Area */}
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={styles.input}
+              placeholder="Type your message..."
+              value={inputText}
+              onChangeText={setInputText}
+              multiline
+              maxLength={500}
+            />
+            
+            <TouchableOpacity
+              style={[styles.sendButton, !inputText.trim() && styles.sendButtonDisabled]}
+              onPress={() => sendMessage(inputText)}
+              disabled={!inputText.trim() || isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color={Theme.colors.surface} size="small" />
+              ) : (
+                <Ionicons name="send" size={24} color={Theme.colors.surface} />
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
 };
 
 const styles = StyleSheet.create({
-container: {
-flex: 1,
-backgroundColor: '#00FFFF',
-alignItems: 'center',
-justifyContent: 'flex-start',
-padding: 20,
-},
-header: {
-marginTop: 20,
-marginBottom: 30,
-},
-title: {
-fontSize: 20,
-fontWeight: 'bold',
-color: '#000000',
-},
-subtitle: {
-fontSize: 14,
-color: '#000000',
-},
-welcomeMessage: {
-fontSize: 18,
-marginBottom: 20,
-color: '#000000',
-},
-panicButton: {
-width: 100,
-height: 100,
-borderRadius: 50,
-backgroundColor: '#FF0000',
-justifyContent: 'center',
-alignItems: 'center',
-marginBottom: 20,
-},
-panicButtonText: {
-fontSize: 16,
-color: '#FFFFFF',
-},
-quickAccessContainer: {
-flexDirection: 'row',
-justifyContent: 'space-around',
-marginBottom: 20,
-},
-quickAccessButton: {
-width: 100,
-height: 50,
-backgroundColor: '#90EE90',
-justifyContent: 'center',
-alignItems: 'center',
-marginHorizontal: 10,
-},
-buttonText: {
-fontSize: 14,
-color: '#000000',
-},
-durgaButton: {
-width: 70,
-height: 70,
-backgroundColor: '#FF00FF',
-justifyContent: 'center',
-alignItems: 'center',
-position: 'absolute',
-bottom: 20,
-right: 20,
-},
-durgaButtonText: {
-fontSize: 14,
-color: '#FFFFFF',
-},
+  container: {
+    flex: 1,
+    backgroundColor: Theme.colors.background,
+  },
+  keyboardAvoidingView: {
+    flex: 1,
+  },
+  chatContainer: {
+    flex: 1,
+    padding: Theme.spacing.md,
+  },
+  messagesList: {
+    paddingBottom: Theme.spacing.md,
+  },
+  messageContainer: {
+    flexDirection: 'row',
+    marginBottom: Theme.spacing.md,
+    maxWidth: '85%',
+  },
+  userMessageContainer: {
+    alignSelf: 'flex-end',
+  },
+  botMessageContainer: {
+    alignSelf: 'flex-start',
+  },
+  messageBubble: {
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.lg,
+    maxWidth: '80%',
+  },
+  userMessageBubble: {
+    backgroundColor: Theme.colors.primary,
+    borderTopRightRadius: Theme.borderRadius.xs,
+    marginRight: Theme.spacing.xs,
+  },
+  botMessageBubble: {
+    backgroundColor: Theme.colors.surface,
+    borderTopLeftRadius: Theme.borderRadius.xs,
+    marginLeft: Theme.spacing.xs,
+    ...Theme.shadows.sm,
+  },
+  messageText: {
+    fontSize: Theme.fontSizes.md,
+    lineHeight: 20,
+  },
+  userMessageText: {
+    color: Theme.colors.surface,
+  },
+  botMessageText: {
+    color: Theme.colors.text,
+  },
+  userAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  botAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Theme.colors.surface,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Theme.shadows.sm,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: Theme.spacing.sm,
+    paddingHorizontal: Theme.spacing.md,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: Theme.borderRadius.lg,
+    marginTop: Theme.spacing.md,
+    ...Theme.shadows.sm,
+  },
+  input: {
+    flex: 1,
+    padding: Theme.spacing.sm,
+    fontSize: Theme.fontSizes.md,
+    color: Theme.colors.text,
+    maxHeight: 100,
+  },
+  sendButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Theme.colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: Theme.spacing.sm,
+  },
+  sendButtonDisabled: {
+    backgroundColor: Theme.colors.textLight,
+  },
+  suggestionsContainer: {
+    marginVertical: Theme.spacing.md,
+    backgroundColor: `${Theme.colors.primary}10`,
+    padding: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+  },
+  suggestionsTitle: {
+    fontSize: Theme.fontSizes.md,
+    fontWeight: '600',
+    color: Theme.colors.text,
+    marginBottom: Theme.spacing.sm,
+  },
+  suggestionsList: {
+    flexDirection: 'column',
+  },
+  suggestionItem: {
+    backgroundColor: Theme.colors.surface,
+    padding: Theme.spacing.sm,
+    borderRadius: Theme.borderRadius.md,
+    marginBottom: Theme.spacing.sm,
+    ...Theme.shadows.sm,
+  },
+  suggestionText: {
+    fontSize: Theme.fontSizes.sm,
+    color: Theme.colors.text,
+  },
 });
 
-export default HomeScreen;
+export default DurgaAiScreen;
