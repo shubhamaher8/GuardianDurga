@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, FlatList, SafeAreaView, StatusBar, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, SafeAreaView, StatusBar, Alert, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../supabase';
 import { getEmergencyContacts, setPrimaryContact, deleteEmergencyContact } from '../utils/supabaseHelpers';
@@ -94,6 +94,24 @@ const EmergencyContactsScreen = ({ navigation }) => {
     );
   };
 
+  // Dial contact
+  const dialContact = (phoneNumber) => {
+    Linking.openURL(`tel:${phoneNumber}`);
+  };
+
+  // Add confirmation before dialing
+  const confirmDialContact = (contact) => {
+    Alert.alert(
+      'Call Contact',
+      `Are you sure you want to call ${contact.name}? (${contact.phone})`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Call', onPress: () => dialContact(contact.phone), style: 'destructive' }
+      ],
+      { cancelable: true }
+    );
+  };
+
   // Load contacts on mount and when navigating back to this screen
   useEffect(() => {
     fetchContacts();
@@ -108,47 +126,49 @@ const EmergencyContactsScreen = ({ navigation }) => {
 
   // Render each contact item
   const renderContactItem = ({ item }) => (
-    <Card
-      style={styles.contactCard}
-      elevation="sm"
-      padding={false}
-    >
-      <View style={styles.contactCardContent}>
-        <View style={styles.contactInfo}>
-          <View style={styles.nameContainer}>
-            <Text style={styles.contactName}>{item.name}</Text>
-            {item.is_primary && (
-              <View style={styles.primaryBadge}>
-                <Text style={styles.primaryText}>Primary</Text>
-              </View>
+    <TouchableOpacity activeOpacity={0.7} onPress={() => confirmDialContact(item)}>
+      <Card
+        style={styles.contactCard}
+        elevation="sm"
+        padding={false}
+      >
+        <View style={styles.contactCardContent}>
+          <View style={styles.contactInfo}>
+            <View style={styles.nameContainer}>
+              <Text style={styles.contactName}>{item.name}</Text>
+              {item.is_primary && (
+                <View style={styles.primaryBadge}>
+                  <Text style={styles.primaryText}>Primary</Text>
+                </View>
+              )}
+            </View>
+            
+            <Text style={styles.contactPhone}>{item.phone}</Text>
+            {item.relationship && (
+              <Text style={styles.contactRelationship}>{item.relationship}</Text>
             )}
           </View>
           
-          <Text style={styles.contactPhone}>{item.phone}</Text>
-          {item.relationship && (
-            <Text style={styles.contactRelationship}>{item.relationship}</Text>
-          )}
-        </View>
-        
-        <View style={styles.contactActions}>
-          {!item.is_primary && (
+          <View style={styles.contactActions}>
+            {!item.is_primary && (
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => togglePrimaryContact(item.id, true)}
+              >
+                <Ionicons name="star-outline" size={Theme.controlSizes.iconSize.small} color={Theme.colors.primary} />
+              </TouchableOpacity>
+            )}
+            
             <TouchableOpacity 
               style={styles.actionButton}
-              onPress={() => togglePrimaryContact(item.id, true)}
+              onPress={() => deleteContact(item.id)}
             >
-              <Ionicons name="star-outline" size={Theme.controlSizes.iconSize.small} color={Theme.colors.primary} />
+              <Ionicons name="trash-outline" size={Theme.controlSizes.iconSize.small} color={Theme.colors.danger} />
             </TouchableOpacity>
-          )}
-          
-          <TouchableOpacity 
-            style={styles.actionButton}
-            onPress={() => deleteContact(item.id)}
-          >
-            <Ionicons name="trash-outline" size={Theme.controlSizes.iconSize.small} color={Theme.colors.danger} />
-          </TouchableOpacity>
+          </View>
         </View>
-      </View>
-    </Card>
+      </Card>
+    </TouchableOpacity>
   );
 
   // Empty state when no contacts
