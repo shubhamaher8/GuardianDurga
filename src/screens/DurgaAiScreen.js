@@ -15,7 +15,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import Theme from '../theme/theme';
 
-const OPENROUTER_API_KEY = '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';
+const OPENROUTER_API_KEY = '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';
 const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 const DurgaAiScreen = ({ navigation }) => {
@@ -67,7 +67,7 @@ const DurgaAiScreen = ({ navigation }) => {
           'X-Title': 'Guardian Durga Safety Assistant'
         },
         body: JSON.stringify({
-          model: 'anthropic/claude-3-opus:beta', // You can change the model
+          model: 'mistralai/mistral-small-3.1-24b-instruct:free',
           messages: [
             { role: 'system', content: 'You are Durga AI, a personal safety assistant developed for the Guardian Durga app. Your primary goal is to provide helpful, accurate information related to personal safety, emergency response, self-defense, mental health during crisis, and related topics. Be concise, empathetic, and focus on practical advice that could help in real situations. Never encourage violence or illegal activities. If someone appears to be in immediate danger, strongly encourage them to contact emergency services immediately.' },
             ...messages.map(msg => ({
