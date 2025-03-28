@@ -17,6 +17,8 @@ import SafetyTipsScreen from '../screens/SafetyTipsScreen';
 import LocationSharingScreen from '../screens/LocationSharingScreen';
 import PanicConfirmationScreen from '../screens/PanicConfirmationScreen';
 import AddEmergencyContactScreen from '../screens/AddEmergencyContactScreen';
+import ComplaintsListScreen from '../screens/ComplaintsListScreen';
+import ComplaintDetailsScreen from '../screens/ComplaintDetailsScreen';
 
 const Stack = createStackNavigator();
 
@@ -65,9 +67,24 @@ const HomeStack = () => {
         options={{ title: "My Profile" }}
       />
       <Stack.Screen 
+        name="ComplaintsList" 
+        component={ComplaintsListScreen} 
+        options={{ title: "My Complaints" }}
+      />
+      <Stack.Screen 
+        name="ComplaintDetails" 
+        component={ComplaintDetailsScreen} 
+        options={{ title: "Complaint Details" }}
+      />
+      <Stack.Screen 
         name="PanicConfirmation" 
         component={PanicConfirmationScreen} 
         options={{ title: "Confirm Emergency" }}
+      />
+      <Stack.Screen 
+        name="FileAComplaint" 
+        component={FileAComplaintScreen} 
+        options={{ title: "File a Complaint" }}
       />
       <Stack.Screen 
         name="IncidentReporting" 

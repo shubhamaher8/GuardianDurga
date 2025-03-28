@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, FlatList, SafeAreaView, StatusBar, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../supabase';
+import { getEmergencyContacts, setPrimaryContact, deleteEmergencyContact } from '../utils/supabaseHelpers';
 import Theme from '../theme/theme';
 import { scale, wp, moderateScale, screenDimensions } from '../utils/responsive';
 import Card from '../components/Card';
@@ -22,14 +23,7 @@ const EmergencyContactsScreen = ({ navigation }) => {
       if (userError) throw userError;
       
       if (userData?.user) {
-        const { data, error } = await supabase
-          .from('emergency_contacts')
-          .select('*')
-          .eq('user_id', userData.user.id)
-          .order('is_primary', { ascending: false });
-          
-        if (error) throw error;
-        
+        const data = await getEmergencyContacts(userData.user.id);
         setContacts(data || []);
       }
     } catch (error) {
@@ -49,23 +43,15 @@ const EmergencyContactsScreen = ({ navigation }) => {
       const { data: userData } = await supabase.auth.getUser();
       
       if (isPrimary) {
-        // If setting as primary, update any existing primary to non-primary
-        const { error: updateOtherError } = await supabase
+        // Set as primary
+        await setPrimaryContact(userData.user.id, contactId);
+      } else {
+        // Update the selected contact to not be primary
+        await supabase
           .from('emergency_contacts')
-          .update({ is_primary: false })
-          .eq('user_id', userData.user.id)
-          .eq('is_primary', true);
-          
-        if (updateOtherError) throw updateOtherError;
+          .update({ is_primary: false, updated_at: new Date() })
+          .eq('id', contactId);
       }
-      
-      // Update the selected contact
-      const { error } = await supabase
-        .from('emergency_contacts')
-        .update({ is_primary: isPrimary })
-        .eq('id', contactId);
-        
-      if (error) throw error;
       
       // Refresh the contacts list
       fetchContacts();
@@ -92,12 +78,7 @@ const EmergencyContactsScreen = ({ navigation }) => {
             try {
               setLoading(true);
               
-              const { error } = await supabase
-                .from('emergency_contacts')
-                .delete()
-                .eq('id', contactId);
-                
-              if (error) throw error;
+              await deleteEmergencyContact(contactId);
               
               // Refresh the contacts list
               fetchContacts();

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, StatusBar, Alert, ScrollView, Switch, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../supabase';
+import { addEmergencyContact, setPrimaryContact } from '../utils/supabaseHelpers';
 import Theme from '../theme/theme';
 import Input from '../components/Input';
 import Button from '../components/Button';
@@ -65,33 +66,33 @@ const AddEmergencyContactScreen = ({ navigation, route }) => {
       if (userError) throw userError;
       
       if (userData?.user) {
-        // Check if this is set as primary contact and there's an existing primary
-        if (isPrimary) {
-          // If setting as primary, update any existing primary to non-primary
-          const { error: updateError } = await supabase
-            .from('emergency_contacts')
-            .update({ is_primary: false })
-            .eq('user_id', userData.user.id)
-            .eq('is_primary', true);
-            
-          if (updateError) throw updateError;
-        }
-        
         // Insert the new contact
-        const { error: insertError } = await supabase
-          .from('emergency_contacts')
-          .insert([
-            {
-              user_id: userData.user.id,
-              name: name,
-              phone: phone,
-              relationship: relationship,
-              is_primary: isPrimary,
-              created_at: new Date()
-            }
-          ]);
+        await addEmergencyContact({
+          user_id: userData.user.id,
+          name: name,
+          phone: phone,
+          relationship: relationship,
+          is_primary: false // Initially set to false
+        });
+        
+        // If this contact should be primary, update it after creation
+        if (isPrimary) {
+          // Get the latest contacts to find the one we just created
+          const { data: latestContacts, error: fetchError } = await supabase
+            .from('emergency_contacts')
+            .select('id')
+            .eq('user_id', userData.user.id)
+            .eq('name', name)
+            .eq('phone', phone)
+            .order('created_at', { ascending: false })
+            .limit(1);
+            
+          if (fetchError) throw fetchError;
           
-        if (insertError) throw insertError;
+          if (latestContacts && latestContacts.length > 0) {
+            await setPrimaryContact(userData.user.id, latestContacts[0].id);
+          }
+        }
         
         Alert.alert('Success', 'Contact added successfully');
         navigation.goBack();

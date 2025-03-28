@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Alert, Linking, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Theme from '../theme/theme';
 import Button from '../components/Button';
@@ -8,6 +8,54 @@ const PanicConfirmationScreen = ({ navigation }) => {
   const [countdown, setCountdown] = useState(5);
   const [panicActivated, setPanicActivated] = useState(false);
   const [loading, setLoading] = useState(false);
+  
+  // Emergency phone numbers
+  const POLICE_EMERGENCY_NUMBER = '911';  // Change as needed for your region
+  const AMBULANCE_EMERGENCY_NUMBER = '911';  // Change as needed for your region
+  
+  // Function to make a phone call
+  const makePhoneCall = (phoneNumber) => {
+    let phoneUrl = Platform.OS === 'android' ? `tel:${phoneNumber}` : `telprompt:${phoneNumber}`;
+    
+    Linking.canOpenURL(phoneUrl)
+      .then(supported => {
+        if (supported) {
+          return Linking.openURL(phoneUrl);
+        } else {
+          Alert.alert('Phone Call Not Supported', 'Your device does not support making phone calls');
+        }
+      })
+      .catch(err => {
+        Alert.alert('Error', 'Failed to make phone call');
+        console.error('Error making phone call:', err);
+      });
+  };
+  
+  // Function to call police
+  const callPolice = () => {
+    Alert.alert(
+      'Call Emergency Services',
+      `Are you sure you want to call the police? (${POLICE_EMERGENCY_NUMBER})`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Call', style: 'destructive', onPress: () => makePhoneCall(POLICE_EMERGENCY_NUMBER) }
+      ],
+      { cancelable: true }
+    );
+  };
+  
+  // Function to call ambulance
+  const callAmbulance = () => {
+    Alert.alert(
+      'Call Emergency Services',
+      `Are you sure you want to call an ambulance? (${AMBULANCE_EMERGENCY_NUMBER})`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Call', style: 'destructive', onPress: () => makePhoneCall(AMBULANCE_EMERGENCY_NUMBER) }
+      ],
+      { cancelable: true }
+    );
+  };
   
   useEffect(() => {
     let timer;
@@ -72,29 +120,34 @@ const PanicConfirmationScreen = ({ navigation }) => {
         
         {!panicActivated ? (
           <View style={styles.actionsContainer}>
-            <Button
-              title="ACTIVATE PANIC MODE"
-              variant="danger"
-              size="large"
+            <TouchableOpacity 
+              style={[styles.emergencyOption, styles.panicButton]}
               onPress={activatePanic}
-              fullWidth
-              style={styles.activateButton}
-            />
+            >
+              <Ionicons name="alert-circle" size={42} color={Theme.colors.surface} />
+              <Text style={styles.panicButtonText}>ACTIVATE PANIC MODE</Text>
+            </TouchableOpacity>
             
             <TouchableOpacity 
-              style={styles.cancelButton}
+              style={[styles.emergencyOption, styles.cancelMainButton]}
               onPress={() => navigation.goBack()}
             >
               <Text style={styles.cancelText}>Cancel</Text>
             </TouchableOpacity>
             
             <View style={styles.emergencyOptions}>
-              <TouchableOpacity style={styles.emergencyOption}>
+              <TouchableOpacity 
+                style={styles.emergencyOption}
+                onPress={callPolice}
+              >
                 <Ionicons name="call" size={32} color={Theme.colors.surface} />
                 <Text style={styles.emergencyOptionText}>Call Police</Text>
               </TouchableOpacity>
               
-              <TouchableOpacity style={styles.emergencyOption}>
+              <TouchableOpacity 
+                style={styles.emergencyOption}
+                onPress={callAmbulance}
+              >
                 <Ionicons name="medical" size={32} color={Theme.colors.surface} />
                 <Text style={styles.emergencyOptionText}>Call Ambulance</Text>
               </TouchableOpacity>
@@ -110,26 +163,18 @@ const PanicConfirmationScreen = ({ navigation }) => {
           </View>
         ) : (
           <View style={styles.actionsContainer}>
-            <Button
-              title={loading ? "SENDING ALERTS..." : "SEND NOW"}
-              variant="danger"
-              size="large"
-              onPress={triggerPanicActions}
-              loading={loading}
-              fullWidth
-              style={styles.sendNowButton}
-            />
-            
-            {!loading && (
-              <Button
-                title="CANCEL"
-                variant="outline"
-                size="large"
+            {!loading ? (
+              <TouchableOpacity
+                style={[styles.emergencyOption, styles.cancelPanicButtonNew]}
                 onPress={cancelPanic}
-                fullWidth
-                style={styles.cancelPanicButton}
-                textStyle={styles.cancelPanicButtonText}
-              />
+              >
+                <Ionicons name="close-circle" size={42} color="#ffffff" />
+                <Text style={styles.cancelPanicTextNew}>CANCEL</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.loadingContainer}>
+                <Text style={styles.loadingText}>Sending alerts...</Text>
+              </View>
             )}
           </View>
         )}
@@ -178,8 +223,35 @@ const styles = StyleSheet.create({
   actionsContainer: {
     marginBottom: Theme.spacing.xl,
   },
-  activateButton: {
+  mainActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: Theme.spacing.xl,
+  },
+  panicButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    width: '100%',
+    paddingVertical: Theme.spacing.lg,
     marginBottom: Theme.spacing.lg,
+  },
+  cancelMainButton: {
+    width: '40%',
+    paddingVertical: Theme.spacing.sm,
+    marginBottom: Theme.spacing.xl,
+    alignSelf: 'center',
+  },
+  cancelText: {
+    fontSize: Theme.fontSizes.md,
+    color: Theme.colors.surface,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  panicButtonText: {
+    fontSize: Theme.fontSizes.md,
+    fontWeight: 'bold',
+    color: Theme.colors.surface,
+    marginTop: Theme.spacing.sm,
+    textAlign: 'center',
   },
   sendNowButton: {
     marginBottom: Theme.spacing.lg,
@@ -190,16 +262,6 @@ const styles = StyleSheet.create({
   },
   cancelPanicButtonText: {
     color: Theme.colors.surface,
-  },
-  cancelButton: {
-    alignItems: 'center',
-    padding: Theme.spacing.md,
-    marginBottom: Theme.spacing.xl,
-  },
-  cancelText: {
-    fontSize: Theme.fontSizes.lg,
-    color: Theme.colors.surface,
-    fontWeight: '500',
   },
   emergencyOptions: {
     flexDirection: 'row',
@@ -218,6 +280,30 @@ const styles = StyleSheet.create({
     color: Theme.colors.surface,
     marginTop: Theme.spacing.sm,
     textAlign: 'center',
+  },
+  cancelPanicButtonNew: {
+    width: '80%',
+    paddingVertical: Theme.spacing.lg,
+    marginBottom: Theme.spacing.xl,
+    alignSelf: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  cancelPanicTextNew: {
+    fontSize: Theme.fontSizes.lg,
+    color: '#ffffff',
+    textAlign: 'center',
+    fontWeight: 'bold',
+    marginTop: Theme.spacing.md,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: Theme.spacing.lg,
+  },
+  loadingText: {
+    fontSize: Theme.fontSizes.lg,
+    color: Theme.colors.surface,
+    fontWeight: 'bold',
   },
 });
 

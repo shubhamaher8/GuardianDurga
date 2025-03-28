@@ -90,7 +90,7 @@ const Register = ({ navigation }) => {
       
       if (data?.user) {
         try {
-          // Create a profile entry in a profiles table
+          // Create a profile entry in the profiles table
           const { error: profileError } = await supabase
             .from('profiles')
             .insert([
@@ -98,7 +98,8 @@ const Register = ({ navigation }) => {
                 id: data.user.id, 
                 username: username,
                 email: email,
-                created_at: new Date()
+                created_at: new Date(),
+                updated_at: new Date()
               }
             ]);
             

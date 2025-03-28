@@ -102,12 +102,21 @@ const HomeScreen = ({ navigation }) => {
             />
             
             <Card 
-              title="Report Incident" 
-              subtitle="File a formal complaint"
+              title="File Complaint" 
+              subtitle="Report an incident"
               icon="document-text"
               iconColor={Theme.colors.warning}
-              onPress={() => navigation.navigate('IncidentReporting')}
+              onPress={() => navigation.navigate('FileAComplaint')}
               style={[styles.card, orientation === 'landscape' && { width: wp(42), marginLeft: wp(2) }]}
+            />
+            
+            <Card 
+              title="My Complaints" 
+              subtitle="View your complaint history"
+              icon="list"
+              iconColor={Theme.colors.info}
+              onPress={() => navigation.navigate('ComplaintsList')}
+              style={[styles.card, orientation === 'landscape' && { width: wp(42), marginRight: wp(2) }]}
             />
             
             <Card 
@@ -116,7 +125,7 @@ const HomeScreen = ({ navigation }) => {
               icon="call"
               iconColor={Theme.colors.success}
               onPress={() => navigation.navigate('FakeCallSetup')}
-              style={[styles.card, orientation === 'landscape' && { width: wp(42), marginRight: wp(2) }]}
+              style={[styles.card, orientation === 'landscape' && { width: wp(42), marginLeft: wp(2) }]}
             />
             
             <Card 
@@ -125,7 +134,7 @@ const HomeScreen = ({ navigation }) => {
               icon="shield-checkmark"
               iconColor={Theme.colors.info}
               onPress={() => navigation.navigate('SafetyTips')}
-              style={[styles.card, orientation === 'landscape' && { width: wp(42), marginLeft: wp(2) }]}
+              style={[styles.card, orientation === 'landscape' && { width: wp(42), marginRight: wp(2) }]}
             />
           </View>
         </View>

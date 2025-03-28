@@ -1,155 +1,205 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, ScrollView, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Theme from '../theme/theme';
 import Button from '../components/Button';
 import Card from '../components/Card';
 import Input from '../components/Input';
 import { supabase } from '../../supabase';
+import { getUserProfile, updateUserProfile } from '../utils/supabaseHelpers';
 
 const ProfileScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [editing, setEditing] = useState(false);
-  
-  // Form state
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [username, setUsername] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [address, setAddress] = useState('');
-  const [emergencyContact, setEmergencyContact] = useState('');
+  const [email, setEmail] = useState('');
+  const [profileImageUrl, setProfileImageUrl] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(false);
   
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
-        
-        if (userError) {
-          throw userError;
-        }
-        
-        if (userData?.user) {
-          setUser(userData.user);
-          
-          // Fetch profile data from a profile table (in a real app)
-          // For now we'll use dummy data
-          setName('Jane Doe');
-          setPhone('+91 98765 43210');
-          setAddress('123 Safety Street, Secure City');
-          setEmergencyContact('Mom: +91 98765 43211');
-        }
-      } catch (error) {
-        console.error('Error fetching user profile:', error.message);
-      }
-    };
-    
-    fetchUserProfile();
-  }, []);
-  
-  const handleSignOut = async () => {
+  // Fetch user profile data
+  const fetchUserProfile = async () => {
     setLoading(true);
-    
     try {
-      const { error } = await supabase.auth.signOut();
+      const { data: userData, error: userError } = await supabase.auth.getUser();
       
-      if (error) {
-        throw error;
+      if (userError) throw userError;
+      
+      if (userData?.user) {
+        setUser(userData.user);
+        
+        // Get profile data
+        const profileData = await getUserProfile(userData.user.id);
+        
+        if (profileData) {
+          setUsername(profileData.username || '');
+          setFullName(profileData.full_name || '');
+          setPhoneNumber(profileData.phone_number || '');
+          setAddress(profileData.address || '');
+          setEmail(profileData.email || userData.user.email);
+          setProfileImageUrl(profileData.profile_image_url || null);
+        }
       }
-      
-      navigation.replace('Login');
     } catch (error) {
-      Alert.alert('Error signing out', error.message);
+      console.error('Error fetching profile:', error);
+      Alert.alert('Error', 'Failed to load profile data. Please try again.');
     } finally {
       setLoading(false);
     }
   };
   
-  const handleSaveProfile = () => {
-    // In a real app, you would save this to your user profile table
-    setLoading(true);
-    
-    setTimeout(() => {
-      setLoading(false);
-      setEditing(false);
-      Alert.alert('Profile Updated', 'Your profile has been updated successfully.');
-    }, 1000);
+  // Load profile on mount
+  useEffect(() => {
+    fetchUserProfile();
+  }, []);
+  
+  // Validate form before updating
+  const validateForm = () => {
+    // Add validation logic if needed
+    return true;
   };
   
+  // Update user profile
+  const handleUpdateProfile = async () => {
+    if (!validateForm()) return;
+    
+    setUpdating(true);
+    try {
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) throw userError;
+      
+      if (userData?.user) {
+        // Update profile
+        await updateUserProfile(userData.user.id, {
+          full_name: fullName,
+          phone_number: phoneNumber,
+          address: address,
+          profile_image_url: profileImageUrl,
+        });
+        
+        Alert.alert('Success', 'Profile updated successfully');
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      Alert.alert('Error', 'Failed to update profile. Please try again.');
+    } finally {
+      setUpdating(false);
+    }
+  };
+  
+  const handleSignOut = async () => {
+    const { error } = await supabase.auth.signOut();
+    
+    if (error) {
+      Alert.alert('Error', 'Failed to sign out. Please try again.');
+    } else {
+      navigation.navigate('Login');
+    }
+  };
+  
+  // ProfileDetailsContainer component with navigation options
+  const ProfileDetailsContainer = ({ navigation, fullName, phoneNumber, address, handleSignOut }) => (
+    <View style={styles.profileDetailsContainer}>
+      <View style={styles.profileDetail}>
+        <Ionicons name="person-outline" size={24} color={Theme.colors.primary} />
+        <View style={styles.detailContent}>
+          <Text style={styles.detailLabel}>Full Name</Text>
+          <Text style={styles.detailValue}>{fullName || 'Not set'}</Text>
+        </View>
+      </View>
+      
+      <View style={styles.profileDetail}>
+        <Ionicons name="call-outline" size={24} color={Theme.colors.primary} />
+        <View style={styles.detailContent}>
+          <Text style={styles.detailLabel}>Phone Number</Text>
+          <Text style={styles.detailValue}>{phoneNumber || 'Not set'}</Text>
+        </View>
+      </View>
+      
+      <View style={styles.profileDetail}>
+        <Ionicons name="location-outline" size={24} color={Theme.colors.primary} />
+        <View style={styles.detailContent}>
+          <Text style={styles.detailLabel}>Address</Text>
+          <Text style={styles.detailValue}>{address || 'Not set'}</Text>
+        </View>
+      </View>
+
+      <TouchableOpacity 
+        style={styles.navigationOption}
+        onPress={() => navigation.navigate('ComplaintsList')}
+      >
+        <Ionicons name="document-text-outline" size={24} color={Theme.colors.primary} />
+        <View style={styles.detailContent}>
+          <Text style={styles.optionTitle}>My Complaints</Text>
+          <Text style={styles.optionDescription}>View your filed complaints history</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={Theme.colors.textLight} />
+      </TouchableOpacity>
+      
+      <Button
+        title="Sign Out"
+        variant="outline"
+        onPress={handleSignOut}
+        leftIcon="log-out-outline"
+        style={styles.signOutButton}
+      />
+    </View>
+  );
+  
+  // Rest of your component
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={Theme.colors.background} />
       
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        {/* Profile Header */}
+      <ScrollView style={styles.scrollView}>
         <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatar}>
-              <Ionicons name="person" size={60} color={Theme.colors.primary} />
-            </View>
-            <TouchableOpacity style={styles.editAvatarButton}>
-              <Ionicons name="camera" size={24} color={Theme.colors.surface} />
-            </TouchableOpacity>
+          <View style={styles.profileImageContainer}>
+            {profileImageUrl ? (
+              <Image 
+                source={{ uri: profileImageUrl }}
+                style={styles.profileImage}
+              />
+            ) : (
+              <View style={styles.profileImagePlaceholder}>
+                <Ionicons name="person" size={40} color={Theme.colors.primary} />
+              </View>
+            )}
           </View>
           
-          <Text style={styles.userName}>{name || 'User'}</Text>
-          <Text style={styles.userEmail}>{user?.email || 'user@example.com'}</Text>
+          <Text style={styles.username}>{username || 'User'}</Text>
+          <Text style={styles.email}>{email}</Text>
+          
+          {!isEditing && (
+            <TouchableOpacity 
+              style={styles.editButton} 
+              onPress={() => setIsEditing(true)}
+            >
+              <Ionicons name="pencil" size={18} color={Theme.colors.primary} />
+              <Text style={styles.editText}>Edit Profile</Text>
+            </TouchableOpacity>
+          )}
         </View>
         
-        {/* Profile Information */}
-        <Card style={styles.infoCard}>
-          <View style={styles.cardHeader}>
-            <Text style={styles.cardTitle}>Personal Information</Text>
-            
-            {!editing ? (
-              <TouchableOpacity 
-                style={styles.editButton} 
-                onPress={() => setEditing(true)}
-              >
-                <Ionicons name="create-outline" size={20} color={Theme.colors.primary} />
-                <Text style={styles.editButtonText}>Edit</Text>
-              </TouchableOpacity>
-            ) : null}
-          </View>
-          
-          {!editing ? (
-            <View style={styles.infoContainer}>
-              <View style={styles.infoItem}>
-                <Ionicons name="person-outline" size={20} color={Theme.colors.textLight} />
-                <Text style={styles.infoLabel}>Name</Text>
-                <Text style={styles.infoValue}>{name}</Text>
-              </View>
-              
-              <View style={styles.infoItem}>
-                <Ionicons name="call-outline" size={20} color={Theme.colors.textLight} />
-                <Text style={styles.infoLabel}>Phone</Text>
-                <Text style={styles.infoValue}>{phone}</Text>
-              </View>
-              
-              <View style={styles.infoItem}>
-                <Ionicons name="location-outline" size={20} color={Theme.colors.textLight} />
-                <Text style={styles.infoLabel}>Address</Text>
-                <Text style={styles.infoValue}>{address}</Text>
-              </View>
-              
-              <View style={styles.infoItem}>
-                <Ionicons name="people-outline" size={20} color={Theme.colors.textLight} />
-                <Text style={styles.infoLabel}>Emergency Contact</Text>
-                <Text style={styles.infoValue}>{emergencyContact}</Text>
-              </View>
-            </View>
-          ) : (
-            <View style={styles.editContainer}>
+        <View style={styles.profileContent}>
+          {isEditing ? (
+            <View style={styles.editFormContainer}>
               <Input
-                label="Name"
-                value={name}
-                onChangeText={setName}
+                label="Full Name"
+                value={fullName}
+                onChangeText={setFullName}
                 placeholder="Enter your full name"
                 icon="person-outline"
               />
               
               <Input
-                label="Phone"
-                value={phone}
-                onChangeText={setPhone}
+                label="Phone Number"
+                value={phoneNumber}
+                onChangeText={setPhoneNumber}
                 placeholder="Enter your phone number"
                 keyboardType="phone-pad"
                 icon="call-outline"
@@ -160,75 +210,35 @@ const ProfileScreen = ({ navigation }) => {
                 value={address}
                 onChangeText={setAddress}
                 placeholder="Enter your address"
-                multiline
                 icon="location-outline"
               />
               
-              <Input
-                label="Emergency Contact"
-                value={emergencyContact}
-                onChangeText={setEmergencyContact}
-                placeholder="Enter emergency contact details"
-                icon="people-outline"
-              />
-              
-              <View style={styles.actionButtons}>
+              <View style={styles.buttonContainer}>
                 <Button
                   title="Cancel"
+                  onPress={() => setIsEditing(false)}
                   variant="outline"
-                  onPress={() => setEditing(false)}
                   style={styles.cancelButton}
                 />
                 
                 <Button
                   title="Save"
-                  onPress={handleSaveProfile}
-                  loading={loading}
+                  onPress={handleUpdateProfile}
+                  loading={updating}
                   style={styles.saveButton}
                 />
               </View>
             </View>
+          ) : (
+            <ProfileDetailsContainer 
+              navigation={navigation} 
+              fullName={fullName} 
+              phoneNumber={phoneNumber} 
+              address={address}
+              handleSignOut={handleSignOut}
+            />
           )}
-        </Card>
-        
-        {/* Additional Options */}
-        <Card style={styles.optionsCard}>
-          <Text style={styles.cardTitle}>Settings</Text>
-          
-          <TouchableOpacity style={styles.optionItem}>
-            <Ionicons name="notifications-outline" size={24} color={Theme.colors.text} />
-            <Text style={styles.optionText}>Notification Preferences</Text>
-            <Ionicons name="chevron-forward" size={20} color={Theme.colors.textLight} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.optionItem}>
-            <Ionicons name="shield-checkmark-outline" size={24} color={Theme.colors.text} />
-            <Text style={styles.optionText}>Privacy Settings</Text>
-            <Ionicons name="chevron-forward" size={20} color={Theme.colors.textLight} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.optionItem}>
-            <Ionicons name="help-circle-outline" size={24} color={Theme.colors.text} />
-            <Text style={styles.optionText}>Help & Support</Text>
-            <Ionicons name="chevron-forward" size={20} color={Theme.colors.textLight} />
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.optionItem}>
-            <Ionicons name="information-circle-outline" size={24} color={Theme.colors.text} />
-            <Text style={styles.optionText}>About Guardian Durga</Text>
-            <Ionicons name="chevron-forward" size={20} color={Theme.colors.textLight} />
-          </TouchableOpacity>
-        </Card>
-        
-        {/* Sign Out Button */}
-        <Button
-          title="Sign Out"
-          variant="outline"
-          onPress={handleSignOut}
-          loading={loading}
-          fullWidth
-          style={styles.signOutButton}
-        />
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
@@ -239,96 +249,89 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Theme.colors.background,
   },
-  scrollContent: {
-    padding: Theme.spacing.lg,
+  scrollView: {
+    flex: 1,
   },
   profileHeader: {
     alignItems: 'center',
-    marginBottom: Theme.spacing.xl,
+    padding: Theme.spacing.lg,
+    borderBottomWidth: 1,
+    borderBottomColor: Theme.colors.border,
   },
-  avatarContainer: {
-    position: 'relative',
+  profileImageContainer: {
     marginBottom: Theme.spacing.md,
   },
-  avatar: {
+  profileImage: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+  },
+  profileImagePlaceholder: {
     width: 100,
     height: 100,
     borderRadius: 50,
     backgroundColor: `${Theme.colors.primary}15`,
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  editAvatarButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: Theme.colors.primary,
-    borderRadius: 20,
-    width: 36,
-    height: 36,
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: Theme.colors.surface,
   },
-  userName: {
-    fontSize: Theme.fontSizes.xl,
+  username: {
+    fontSize: Theme.fontSizes.lg,
     fontWeight: 'bold',
     color: Theme.colors.text,
   },
-  userEmail: {
+  email: {
     fontSize: Theme.fontSizes.md,
     color: Theme.colors.textLight,
     marginTop: Theme.spacing.xs,
   },
-  infoCard: {
-    marginBottom: Theme.spacing.lg,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Theme.spacing.md,
-  },
-  cardTitle: {
-    fontSize: Theme.fontSizes.lg,
-    fontWeight: '600',
-    color: Theme.colors.text,
-  },
   editButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: Theme.spacing.md,
+    padding: Theme.spacing.sm,
   },
-  editButtonText: {
-    fontSize: Theme.fontSizes.sm,
+  editText: {
     color: Theme.colors.primary,
     marginLeft: Theme.spacing.xs,
   },
-  infoContainer: {
-    marginTop: Theme.spacing.sm,
+  profileContent: {
+    padding: Theme.spacing.lg,
   },
-  infoItem: {
+  profileDetailsContainer: {
+    gap: Theme.spacing.lg,
+  },
+  profileDetail: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Theme.spacing.md,
+    padding: Theme.spacing.md,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: Theme.borderRadius.md,
+    shadowColor: Theme.colors.shadow,
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
   },
-  infoLabel: {
-    fontSize: Theme.fontSizes.md,
-    color: Theme.colors.textLight,
-    width: 150,
+  detailContent: {
     marginLeft: Theme.spacing.md,
-  },
-  infoValue: {
-    fontSize: Theme.fontSizes.md,
-    color: Theme.colors.text,
     flex: 1,
   },
-  editContainer: {
-    marginTop: Theme.spacing.sm,
+  detailLabel: {
+    fontSize: Theme.fontSizes.sm,
+    color: Theme.colors.textLight,
   },
-  actionButtons: {
+  detailValue: {
+    fontSize: Theme.fontSizes.md,
+    color: Theme.colors.text,
+    fontWeight: '500',
+    marginTop: 2,
+  },
+  editFormContainer: {
+    gap: Theme.spacing.md,
+  },
+  buttonContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginTop: Theme.spacing.md,
   },
   cancelButton: {
@@ -339,24 +342,31 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: Theme.spacing.sm,
   },
-  optionsCard: {
-    marginBottom: Theme.spacing.lg,
+  signOutButton: {
+    marginTop: Theme.spacing.xl,
   },
-  optionItem: {
+  navigationOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Theme.spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: Theme.colors.border,
+    padding: Theme.spacing.md,
+    backgroundColor: Theme.colors.surface,
+    borderRadius: Theme.borderRadius.md,
+    shadowColor: Theme.colors.shadow,
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+    elevation: 2,
+    marginTop: Theme.spacing.md,
   },
-  optionText: {
-    flex: 1,
+  optionTitle: {
     fontSize: Theme.fontSizes.md,
     color: Theme.colors.text,
-    marginLeft: Theme.spacing.md,
+    fontWeight: '500',
   },
-  signOutButton: {
-    marginVertical: Theme.spacing.lg,
+  optionDescription: {
+    fontSize: Theme.fontSizes.sm,
+    color: Theme.colors.textLight,
+    marginTop: 2,
   },
 });
 

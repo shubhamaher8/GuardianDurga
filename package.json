@@ -34,7 +34,8 @@
     "react-native-screens": "~4.4.0",
     "react-native-stack": "^1.0.0-alpha11",
     "react-native-url-polyfill": "^2.0.0",
-    "tamagui": "^1.125.26"
+    "tamagui": "^1.125.26",
+    "expo-location": "~18.0.8"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

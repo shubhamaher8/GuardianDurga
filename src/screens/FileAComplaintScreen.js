@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, StatusBar, Scro
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { supabase } from '../../supabase';
+import { addComplaint } from '../utils/supabaseHelpers';
 import Theme from '../theme/theme';
 import { scale, wp, screenDimensions } from '../utils/responsive';
 import Header from '../components/Header';
@@ -80,22 +81,15 @@ const FileAComplaintScreen = ({ navigation }) => {
         const formattedTime = time.toTimeString().split(' ')[0];
         
         // Insert complaint record
-        const { error } = await supabase
-          .from('complaints')
-          .insert([
-            {
-              user_id: userData.user.id,
-              type: complaintType,
-              date: formattedDate,
-              time: formattedTime,
-              location: location,
-              details: details,
-              status: 'submitted',
-              created_at: new Date()
-            }
-          ]);
-          
-        if (error) throw error;
+        await addComplaint({
+          user_id: userData.user.id,
+          type: complaintType,
+          date: formattedDate,
+          time: formattedTime,
+          location: location,
+          details: details,
+          status: 'submitted'
+        });
         
         Alert.alert(
           'Complaint Submitted',
