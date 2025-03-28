@@ -1,4 +1,6 @@
 // Guardian Durga Theme
+import { moderateScale, scale, wp } from '../utils/responsive';
+
 const Theme = {
   colors: {
     primary: '#6200EE',
@@ -20,29 +22,30 @@ const Theme = {
     disabledBackground: '#F5F5F5',
     disabledText: '#9E9E9E',
     ripple: 'rgba(98, 0, 238, 0.12)',
+    accent: '#FF4081', // Adding accent color for floating button
   },
   spacing: {
-    xs: 4,
-    sm: 8,
-    md: 16,
-    lg: 24,
-    xl: 32,
-    xxl: 48,
+    xs: scale(4),
+    sm: scale(8),
+    md: scale(16),
+    lg: scale(24),
+    xl: scale(32),
+    xxl: scale(48),
   },
   fontSizes: {
-    xs: 12,
-    sm: 14,
-    md: 16,
-    lg: 20,
-    xl: 24,
-    xxl: 32,
+    xs: moderateScale(12),
+    sm: moderateScale(14),
+    md: moderateScale(16),
+    lg: moderateScale(20),
+    xl: moderateScale(24),
+    xxl: moderateScale(32),
   },
   borderRadius: {
-    xs: 2,
-    sm: 4,
-    md: 8,
-    lg: 16,
-    xl: 24,
+    xs: scale(2),
+    sm: scale(4),
+    md: scale(8),
+    lg: scale(16),
+    xl: scale(24),
     round: 999,
   },
   elevation: {
@@ -119,6 +122,29 @@ const Theme = {
       fontWeight: '700',
     },
   },
+  // Responsive layout breakpoints
+  breakpoints: {
+    smallPhone: wp(90), // 90% of small phone screen
+    phone: wp(85),      // 85% of phone screen
+    tablet: wp(75),     // 75% of tablet screen
+  },
+  // Responsive control sizes
+  controlSizes: {
+    buttonHeight: scale(48),
+    inputHeight: scale(48),
+    iconSize: {
+      small: scale(16),
+      medium: scale(24),
+      large: scale(32),
+      xlarge: scale(48)
+    },
+    avatarSize: {
+      small: scale(32),
+      medium: scale(48),
+      large: scale(64),
+      xlarge: scale(128)
+    }
+  }
 };
 
 export default Theme; 

@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, StatusBar, Image } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ScrollView, StatusBar, Image, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Theme from '../theme/theme';
 import Card from '../components/Card';
 import Button from '../components/Button';
 import { supabase } from '../../supabase';
+import { scale, wp, hp, moderateScale, screenDimensions, listenOrientationChange } from '../utils/responsive';
 
 const HomeScreen = ({ navigation }) => {
   const [user, setUser] = useState(null);
   const [username, setUsername] = useState('');
+  const [orientation, setOrientation] = useState(screenDimensions.isPortrait() ? 'portrait' : 'landscape');
+
+  // Listen for orientation changes
+  useEffect(() => {
+    const subscription = listenOrientationChange(({ window }) => {
+      setOrientation(window.height > window.width ? 'portrait' : 'landscape');
+    });
+    
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     const getUserInfo = async () => {
@@ -39,6 +50,9 @@ const HomeScreen = ({ navigation }) => {
     getUserInfo();
   }, []);
 
+  // Calculate the number of cards per row based on orientation
+  const cardsPerRow = orientation === 'landscape' ? 2 : 1;
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={Theme.colors.background} />
@@ -51,16 +65,10 @@ const HomeScreen = ({ navigation }) => {
         </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity 
-            style={styles.menuButton} 
-            onPress={() => navigation.navigate('MenuDrawer')}
-          >
-            <Ionicons name="menu" size={28} color={Theme.colors.text} />
-          </TouchableOpacity>
-          <TouchableOpacity 
             style={styles.profileButton} 
             onPress={() => navigation.navigate('Profile')}
           >
-            <Ionicons name="person-circle" size={36} color={Theme.colors.primary} />
+            <Ionicons name="person-circle" size={Theme.controlSizes.iconSize.large} color={Theme.colors.primary} />
           </TouchableOpacity>
         </View>
       </View>
@@ -74,7 +82,7 @@ const HomeScreen = ({ navigation }) => {
             onPress={() => navigation.navigate('PanicConfirmation')}
           >
             <View style={styles.panicButtonContent}>
-              <Ionicons name="warning" size={28} color={Theme.colors.surface} />
+              <Ionicons name="warning" size={Theme.controlSizes.iconSize.medium} color={Theme.colors.surface} />
               <Text style={styles.panicButtonText}>PANIC MODE</Text>
             </View>
           </TouchableOpacity>
@@ -83,14 +91,14 @@ const HomeScreen = ({ navigation }) => {
         {/* Quick Access */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Quick Access</Text>
-          <View style={styles.cardsContainer}>
+          <View style={[styles.cardsContainer, { flexDirection: orientation === 'landscape' ? 'row' : 'column' }]}>
             <Card 
               title="Emergency Contacts" 
               subtitle="Manage your trusted contacts"
               icon="call"
               iconColor={Theme.colors.primary}
               onPress={() => navigation.navigate('EmergencyContacts')}
-              style={styles.card}
+              style={[styles.card, orientation === 'landscape' && { width: wp(42), marginRight: wp(2) }]}
             />
             
             <Card 
@@ -99,7 +107,7 @@ const HomeScreen = ({ navigation }) => {
               icon="document-text"
               iconColor={Theme.colors.warning}
               onPress={() => navigation.navigate('IncidentReporting')}
-              style={styles.card}
+              style={[styles.card, orientation === 'landscape' && { width: wp(42), marginLeft: wp(2) }]}
             />
             
             <Card 
@@ -107,8 +115,8 @@ const HomeScreen = ({ navigation }) => {
               subtitle="Simulate an incoming call"
               icon="call"
               iconColor={Theme.colors.success}
-              onPress={() => navigation.navigate('FakeCall')}
-              style={styles.card}
+              onPress={() => navigation.navigate('FakeCallSetup')}
+              style={[styles.card, orientation === 'landscape' && { width: wp(42), marginRight: wp(2) }]}
             />
             
             <Card 
@@ -117,7 +125,7 @@ const HomeScreen = ({ navigation }) => {
               icon="shield-checkmark"
               iconColor={Theme.colors.info}
               onPress={() => navigation.navigate('SafetyTips')}
-              style={styles.card}
+              style={[styles.card, orientation === 'landscape' && { width: wp(42), marginLeft: wp(2) }]}
             />
           </View>
         </View>
@@ -140,23 +148,6 @@ const HomeScreen = ({ navigation }) => {
             </View>
           </Card>
         </View>
-
-        {/* Weather Alert Section - New Feature */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Weather Alerts</Text>
-          <Card 
-            title="Local Weather Alerts" 
-            subtitle="Stay informed about weather conditions"
-            icon="cloud"
-            iconColor={Theme.colors.info}
-            onPress={() => navigation.navigate('WeatherAlerts')}
-            style={styles.card}
-          >
-            <Text style={styles.weatherAlertText}>
-              Weather can impact your safety. Get real-time updates about severe weather conditions in your area.
-            </Text>
-          </Card>
-        </View>
       </ScrollView>
       
       {/* Durga AI Floating Button */}
@@ -164,7 +155,7 @@ const HomeScreen = ({ navigation }) => {
         style={styles.durgaAiButton}
         onPress={() => navigation.navigate('Chatbot')}
       >
-        <Ionicons name="chatbubble-ellipses" size={24} color={Theme.colors.surface} />
+        <Ionicons name="chatbubble-ellipses" size={Theme.controlSizes.iconSize.medium} color={Theme.colors.surface} />
       </TouchableOpacity>
     </SafeAreaView>
   );
@@ -197,10 +188,6 @@ const styles = StyleSheet.create({
   headerButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  menuButton: {
-    marginRight: Theme.spacing.md,
-    padding: Theme.spacing.xs,
   },
   profileButton: {
     padding: Theme.spacing.xs,
@@ -238,7 +225,8 @@ const styles = StyleSheet.create({
     marginLeft: Theme.spacing.md,
   },
   cardsContainer: {
-    flexDirection: 'column',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
   },
   card: {
     marginBottom: Theme.spacing.md,
@@ -264,18 +252,13 @@ const styles = StyleSheet.create({
     color: Theme.colors.textLight,
     marginTop: Theme.spacing.xs,
   },
-  weatherAlertText: {
-    fontSize: Theme.fontSizes.sm,
-    color: Theme.colors.text,
-    marginTop: Theme.spacing.sm,
-  },
   durgaAiButton: {
     position: 'absolute',
     bottom: Theme.spacing.lg,
     right: Theme.spacing.lg,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: scale(56),
+    height: scale(56),
+    borderRadius: scale(28),
     backgroundColor: Theme.colors.accent,
     alignItems: 'center',
     justifyContent: 'center',

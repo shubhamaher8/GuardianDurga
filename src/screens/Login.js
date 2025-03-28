@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, TouchableOpacity, Text, SafeAreaView, StatusBar, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, TouchableOpacity, Text, SafeAreaView, StatusBar, KeyboardAvoidingView, Platform, ScrollView, Dimensions } from 'react-native';
 import { supabase } from '../../supabase';
 import Theme from '../theme/theme';
 import Input from '../components/Input';
 import Button from '../components/Button';
 import { Ionicons } from '@expo/vector-icons';
+import { scale, wp, moderateScale, screenDimensions, listenOrientationChange } from '../utils/responsive';
 
 const Login = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -13,6 +14,16 @@ const Login = ({ navigation }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [orientation, setOrientation] = useState(screenDimensions.isPortrait() ? 'portrait' : 'landscape');
+
+  // Listen for orientation changes
+  useEffect(() => {
+    const subscription = listenOrientationChange(({ window }) => {
+      setOrientation(window.height > window.width ? 'portrait' : 'landscape');
+    });
+    
+    return () => subscription.remove();
+  }, []);
 
   const validateForm = () => {
     let isValid = true;
@@ -52,7 +63,7 @@ const Login = ({ navigation }) => {
       if (error) {
         alert(error.message);
       } else {
-        navigation.navigate('MenuDrawer');
+        navigation.navigate('Home');
       }
     } catch (error) {
       alert(error.message);
@@ -63,7 +74,15 @@ const Login = ({ navigation }) => {
   
   // For development - auto login
   const skipLogin = () => {
-    navigation.navigate('MenuDrawer');
+    navigation.navigate('Home');
+  };
+
+  // Calculate width based on orientation and device type
+  const getContentWidth = () => {
+    if (screenDimensions.isTablet) {
+      return orientation === 'landscape' ? wp(50) : wp(75);
+    }
+    return orientation === 'landscape' ? wp(70) : wp(85);
   };
 
   return (
@@ -74,73 +93,78 @@ const Login = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.logoContainer}>
-            <View style={styles.logoPlaceholder}>
-              <Ionicons name="shield-checkmark" size={64} color={Theme.colors.primary} />
+        <ScrollView contentContainerStyle={[
+          styles.scrollContent,
+          { alignItems: orientation === 'landscape' ? 'center' : 'stretch' }
+        ]}>
+          <View style={[styles.contentContainer, { width: getContentWidth() }]}>
+            <View style={styles.logoContainer}>
+              <View style={styles.logoPlaceholder}>
+                <Ionicons name="shield-checkmark" size={scale(64)} color={Theme.colors.primary} />
+              </View>
+              <Text style={styles.appName}>Guardian Durga</Text>
+              <Text style={styles.tagline}>Safety In Your Hands</Text>
             </View>
-            <Text style={styles.appName}>Guardian Durga</Text>
-            <Text style={styles.tagline}>Safety In Your Hands</Text>
-          </View>
-          
-          <View style={styles.formContainer}>
-            <Text style={styles.title}>Welcome Back</Text>
             
-            <Input
-              label="Email"
-              value={email}
-              onChangeText={(text) => {
-                setEmail(text);
-                setEmailError('');
-              }}
-              placeholder="Enter your email"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              icon="mail-outline"
-              error={emailError}
-            />
-            
-            <Input
-              label="Password"
-              value={password}
-              onChangeText={(text) => {
-                setPassword(text);
-                setPasswordError('');
-              }}
-              placeholder="Enter your password"
-              secureTextEntry={!showPassword}
-              icon="lock-closed-outline"
-              rightIcon={showPassword ? "eye-off-outline" : "eye-outline"}
-              onRightIconPress={() => setShowPassword(!showPassword)}
-              error={passwordError}
-            />
-            
-            <TouchableOpacity style={styles.forgotPassword}>
-              <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-            </TouchableOpacity>
-            
-            <Button
-              title="Sign In"
-              onPress={signInWithEmail}
-              loading={loading}
-              fullWidth
-              style={styles.loginButton}
-            />
-            
-            <View style={styles.signupContainer}>
-              <Text style={styles.signupText}>Don't have an account?</Text>
-              <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-                <Text style={styles.signupLink}>Sign Up</Text>
+            <View style={styles.formContainer}>
+              <Text style={styles.title}>Welcome Back</Text>
+              
+              <Input
+                label="Email"
+                value={email}
+                onChangeText={(text) => {
+                  setEmail(text);
+                  setEmailError('');
+                }}
+                placeholder="Enter your email"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                icon="mail-outline"
+                error={emailError}
+              />
+              
+              <Input
+                label="Password"
+                value={password}
+                onChangeText={(text) => {
+                  setPassword(text);
+                  setPasswordError('');
+                }}
+                placeholder="Enter your password"
+                secureTextEntry={!showPassword}
+                icon="lock-closed-outline"
+                rightIcon={showPassword ? "eye-off-outline" : "eye-outline"}
+                onRightIconPress={() => setShowPassword(!showPassword)}
+                error={passwordError}
+              />
+              
+              <TouchableOpacity style={styles.forgotPassword}>
+                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+              </TouchableOpacity>
+              
+              <Button
+                title="Sign In"
+                onPress={signInWithEmail}
+                loading={loading}
+                fullWidth
+                style={styles.loginButton}
+              />
+              
+              <View style={styles.signupContainer}>
+                <Text style={styles.signupText}>Don't have an account?</Text>
+                <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+                  <Text style={styles.signupLink}>Sign Up</Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Dev button to skip login */}
+              <TouchableOpacity 
+                style={styles.devButton} 
+                onPress={skipLogin}
+              >
+                <Text style={styles.devButtonText}>DEV: Skip Login</Text>
               </TouchableOpacity>
             </View>
-            
-            {/* Dev button to skip login */}
-            <TouchableOpacity 
-              style={styles.devButton} 
-              onPress={skipLogin}
-            >
-              <Text style={styles.devButtonText}>DEV: Skip Login</Text>
-            </TouchableOpacity>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -158,14 +182,17 @@ const styles = StyleSheet.create({
     padding: Theme.spacing.lg,
     justifyContent: 'center',
   },
+  contentContainer: {
+    alignSelf: 'center',
+  },
   logoContainer: {
     alignItems: 'center',
     marginBottom: Theme.spacing.xl,
   },
   logoPlaceholder: {
-    width: 128,
-    height: 128,
-    borderRadius: 64,
+    width: scale(128),
+    height: scale(128),
+    borderRadius: scale(64),
     backgroundColor: `${Theme.colors.primary}15`,
     justifyContent: 'center',
     alignItems: 'center',

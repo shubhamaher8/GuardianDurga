@@ -1,89 +1,143 @@
 import React from 'react';
 import { TouchableOpacity, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import Theme from '../theme/theme';
+import { scale } from '../utils/responsive';
 
 const Button = ({ 
   title, 
   onPress, 
   variant = 'primary', 
-  fullWidth = false, 
-  disabled = false,
-  loading = false,
+  size = 'medium',
   leftIcon = null,
   rightIcon = null,
+  loading = false,
+  disabled = false,
+  fullWidth = false,
   style = {}
 }) => {
-  // Define styles based on the variant
+  // Get button colors based on variant
   const getButtonStyle = () => {
-    switch (variant) {
-      case 'primary':
+    switch(variant) {
+      case 'outline':
         return {
-          backgroundColor: disabled ? Theme.colors.disabledBackground : Theme.colors.primary,
+          backgroundColor: 'transparent',
+          borderWidth: 1,
           borderColor: Theme.colors.primary,
         };
       case 'secondary':
         return {
-          backgroundColor: disabled ? Theme.colors.disabledBackground : Theme.colors.secondary,
-          borderColor: Theme.colors.secondary,
-        };
-      case 'outline':
-        return {
-          backgroundColor: 'transparent',
-          borderColor: disabled ? Theme.colors.disabledBackground : Theme.colors.primary,
-          borderWidth: 1,
+          backgroundColor: Theme.colors.secondary,
         };
       case 'danger':
         return {
-          backgroundColor: disabled ? Theme.colors.disabledBackground : Theme.colors.danger,
-          borderColor: Theme.colors.danger,
-        };
-      case 'success':
-        return {
-          backgroundColor: disabled ? Theme.colors.disabledBackground : Theme.colors.success,
-          borderColor: Theme.colors.success,
+          backgroundColor: Theme.colors.danger,
         };
       default:
         return {
-          backgroundColor: disabled ? Theme.colors.disabledBackground : Theme.colors.primary,
-          borderColor: Theme.colors.primary,
+          backgroundColor: Theme.colors.primary,
         };
     }
   };
-
-  // Define text color based on the variant
+  
+  // Get text color based on variant
   const getTextStyle = () => {
-    switch (variant) {
+    switch(variant) {
       case 'outline':
         return {
-          color: disabled ? Theme.colors.disabledText : Theme.colors.primary,
+          color: Theme.colors.primary,
         };
       default:
         return {
-          color: disabled ? Theme.colors.disabledText : Theme.colors.surface,
+          color: Theme.colors.surface,
         };
     }
   };
-
+  
+  // Get button size
+  const getSizeStyle = () => {
+    switch(size) {
+      case 'small':
+        return {
+          paddingVertical: Theme.spacing.xs,
+          paddingHorizontal: Theme.spacing.md,
+          minHeight: scale(36),
+        };
+      case 'large':
+        return {
+          paddingVertical: Theme.spacing.md,
+          paddingHorizontal: Theme.spacing.lg,
+          minHeight: scale(56),
+        };
+      default:
+        return {
+          paddingVertical: Theme.spacing.sm,
+          paddingHorizontal: Theme.spacing.lg,
+          minHeight: Theme.controlSizes.buttonHeight,
+        };
+    }
+  };
+  
+  // Get icon size based on button size
+  const getIconSize = () => {
+    switch(size) {
+      case 'small':
+        return Theme.controlSizes.iconSize.small;
+      case 'large':
+        return Theme.controlSizes.iconSize.medium;
+      default:
+        return Theme.controlSizes.iconSize.small;
+    }
+  };
+  
   return (
     <TouchableOpacity
       style={[
         styles.button,
         getButtonStyle(),
+        getSizeStyle(),
         fullWidth && styles.fullWidth,
+        disabled && styles.disabledButton,
         style
       ]}
       onPress={onPress}
       disabled={disabled || loading}
+      activeOpacity={0.7}
     >
       {loading ? (
-        <ActivityIndicator size="small" color={variant === 'outline' ? Theme.colors.primary : Theme.colors.surface} />
+        <ActivityIndicator 
+          size="small" 
+          color={variant === 'outline' ? Theme.colors.primary : Theme.colors.surface} 
+        />
       ) : (
         <>
-          {leftIcon}
-          <Text style={[styles.buttonText, getTextStyle()]}>
+          {leftIcon && (
+            <Ionicons 
+              name={leftIcon} 
+              size={getIconSize()} 
+              color={getTextStyle().color} 
+              style={{ marginRight: Theme.spacing.xs }}
+            />
+          )}
+          
+          <Text style={[
+            styles.buttonText, 
+            getTextStyle(),
+            size === 'small' && { fontSize: Theme.fontSizes.sm },
+            size === 'large' && { fontSize: Theme.fontSizes.lg },
+            disabled && styles.disabledText
+          ]}>
             {title}
           </Text>
-          {rightIcon}
+          
+          {rightIcon && (
+            <Ionicons 
+              name={rightIcon} 
+              size={getIconSize()} 
+              color={getTextStyle().color} 
+              style={{ marginLeft: Theme.spacing.xs }}
+            />
+          )}
         </>
       )}
     </TouchableOpacity>
@@ -95,20 +149,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Theme.spacing.sm,
-    paddingHorizontal: Theme.spacing.lg,
     borderRadius: Theme.borderRadius.md,
-    minHeight: 48,
   },
   buttonText: {
     fontSize: Theme.fontSizes.md,
     fontWeight: '600',
     textAlign: 'center',
-    marginHorizontal: Theme.spacing.xs,
   },
   fullWidth: {
     width: '100%',
   },
+  disabledButton: {
+    backgroundColor: Theme.colors.disabledBackground,
+    borderColor: Theme.colors.border,
+  },
+  disabledText: {
+    color: Theme.colors.disabledText,
+  }
 });
 
 export default Button; 

@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, StatusBar, Alert, ScrollView, Switch, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, StatusBar, Alert, ScrollView, Switch, TouchableOpacity, Dimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '../../supabase';
 import Theme from '../theme/theme';
 import Input from '../components/Input';
 import Button from '../components/Button';
+import { scale, wp, hp, moderateScale, screenDimensions, listenOrientationChange } from '../utils/responsive';
 
 const AddEmergencyContactScreen = ({ navigation, route }) => {
   const [name, setName] = useState('');
@@ -12,10 +13,20 @@ const AddEmergencyContactScreen = ({ navigation, route }) => {
   const [relationship, setRelationship] = useState('');
   const [isPrimary, setIsPrimary] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [orientation, setOrientation] = useState(screenDimensions.isPortrait() ? 'portrait' : 'landscape');
   
   // Error states
   const [nameError, setNameError] = useState('');
   const [phoneError, setPhoneError] = useState('');
+
+  // Listen for orientation changes
+  useEffect(() => {
+    const subscription = listenOrientationChange(({ window }) => {
+      setOrientation(window.height > window.width ? 'portrait' : 'landscape');
+    });
+    
+    return () => subscription.remove();
+  }, []);
   
   const validateForm = () => {
     let isValid = true;
@@ -96,102 +107,128 @@ const AddEmergencyContactScreen = ({ navigation, route }) => {
   // Common relationships for quick selection
   const relationships = ['Family', 'Friend', 'Partner', 'Colleague', 'Neighbor'];
   
+  // Calculate content width based on orientation
+  const getContentWidth = () => {
+    if (screenDimensions.isTablet) {
+      return orientation === 'landscape' ? wp(70) : wp(80);
+    }
+    return wp(90);
+  };
+  
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="dark-content" backgroundColor={Theme.colors.background} />
       
-      <ScrollView contentContainerStyle={styles.scrollContent}>
-        <Text style={styles.title}>Add Emergency Contact</Text>
-        <Text style={styles.description}>
-          Add someone you trust who can be contacted in case of an emergency.
-        </Text>
-        
-        <Input
-          label="Contact Name"
-          value={name}
-          onChangeText={(text) => {
-            setName(text);
-            setNameError('');
-          }}
-          placeholder="Enter full name"
-          icon="person-outline"
-          error={nameError}
-        />
-        
-        <Input
-          label="Phone Number"
-          value={phone}
-          onChangeText={(text) => {
-            setPhone(text);
-            setPhoneError('');
-          }}
-          placeholder="Enter phone number"
-          keyboardType="phone-pad"
-          icon="call-outline"
-          error={phoneError}
-        />
-        
-        <Text style={styles.sectionTitle}>Relationship</Text>
-        <View style={styles.relationshipContainer}>
-          {relationships.map((item) => (
-            <TouchableOpacity
-              key={item}
-              style={[
-                styles.relationshipItem,
-                relationship === item && styles.relationshipItemActive
-              ]}
-              onPress={() => setRelationship(item)}
-            >
-              <Text
-                style={[
-                  styles.relationshipText,
-                  relationship === item && styles.relationshipTextActive
-                ]}
-              >
-                {item}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-        
-        <Input
-          label="Other Relationship (Optional)"
-          value={relationship}
-          onChangeText={setRelationship}
-          placeholder="Specify relationship"
-          icon="people-outline"
-          style={styles.otherRelationship}
-        />
-        
-        <View style={styles.primaryContainer}>
-          <View style={styles.primaryTextContainer}>
-            <Text style={styles.primaryTitle}>Set as Primary Contact</Text>
-            <Text style={styles.primaryDescription}>
-              Primary contacts will be notified first in case of emergency
-            </Text>
-          </View>
-          <Switch
-            value={isPrimary}
-            onValueChange={setIsPrimary}
-            trackColor={{ false: Theme.colors.border, true: Theme.colors.primary }}
-            thumbColor={Theme.colors.surface}
-          />
-        </View>
-        
-        <View style={styles.buttonContainer}>
-          <Button
-            title="Cancel"
-            variant="outline"
-            onPress={() => navigation.goBack()}
-            style={styles.cancelButton}
+      <ScrollView contentContainerStyle={[
+        styles.scrollContent,
+        { alignItems: orientation === 'landscape' ? 'center' : 'stretch' }
+      ]}>
+        <View style={[styles.contentContainer, { width: getContentWidth() }]}>
+          <Text style={styles.title}>Add Emergency Contact</Text>
+          <Text style={styles.description}>
+            Add someone you trust who can be contacted in case of an emergency.
+          </Text>
+          
+          <Input
+            label="Contact Name"
+            value={name}
+            onChangeText={(text) => {
+              setName(text);
+              setNameError('');
+            }}
+            placeholder="Enter full name"
+            icon="person-outline"
+            error={nameError}
           />
           
-          <Button
-            title="Save Contact"
-            onPress={handleSaveContact}
-            loading={loading}
-            style={styles.saveButton}
+          <Input
+            label="Phone Number"
+            value={phone}
+            onChangeText={(text) => {
+              setPhone(text);
+              setPhoneError('');
+            }}
+            placeholder="Enter phone number"
+            keyboardType="phone-pad"
+            icon="call-outline"
+            error={phoneError}
           />
+          
+          <Text style={styles.sectionTitle}>Relationship</Text>
+          <View style={[
+            styles.relationshipContainer,
+            orientation === 'landscape' && { justifyContent: 'flex-start' }
+          ]}>
+            {relationships.map((item) => (
+              <TouchableOpacity
+                key={item}
+                style={[
+                  styles.relationshipItem,
+                  relationship === item && styles.relationshipItemActive,
+                  { marginRight: orientation === 'landscape' ? Theme.spacing.md : Theme.spacing.xs }
+                ]}
+                onPress={() => setRelationship(item)}
+              >
+                <Text
+                  style={[
+                    styles.relationshipText,
+                    relationship === item && styles.relationshipTextActive
+                  ]}
+                >
+                  {item}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          
+          <Input
+            label="Other Relationship (Optional)"
+            value={relationship}
+            onChangeText={setRelationship}
+            placeholder="Specify relationship"
+            icon="people-outline"
+            style={styles.otherRelationship}
+          />
+          
+          <View style={styles.primaryContainer}>
+            <View style={styles.primaryTextContainer}>
+              <Text style={styles.primaryTitle}>Set as Primary Contact</Text>
+              <Text style={styles.primaryDescription}>
+                Primary contacts will be notified first in case of emergency
+              </Text>
+            </View>
+            <Switch
+              value={isPrimary}
+              onValueChange={setIsPrimary}
+              trackColor={{ false: Theme.colors.border, true: Theme.colors.primary }}
+              thumbColor={Theme.colors.surface}
+            />
+          </View>
+          
+          <View style={[
+            styles.buttonContainer,
+            orientation === 'landscape' && { justifyContent: 'center' }
+          ]}>
+            <Button
+              title="Cancel"
+              variant="outline"
+              onPress={() => navigation.goBack()}
+              style={[
+                styles.cancelButton,
+                orientation === 'landscape' && { width: wp(30), marginRight: wp(5) }
+              ]}
+            />
+            
+            <Button
+              title="Save Contact"
+              onPress={handleSaveContact}
+              loading={loading}
+              style={[
+                styles.saveButton,
+                orientation === 'landscape' && { width: wp(30), marginLeft: wp(5) }
+              ]}
+            />
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -205,6 +242,9 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Theme.spacing.lg,
+  },
+  contentContainer: {
+    alignSelf: 'center',
   },
   title: {
     fontSize: Theme.fontSizes.xl,

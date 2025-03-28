@@ -1,23 +1,24 @@
 import React from 'react';
-import { View, TextInput, Text, StyleSheet } from 'react-native';
+import { View, TextInput, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Theme from '../theme/theme';
+import { scale, moderateScale } from '../utils/responsive';
 
 const Input = ({
   label,
   value,
   onChangeText,
   placeholder,
-  secureTextEntry,
-  keyboardType,
-  autoCapitalize = 'none',
-  error,
-  icon,
-  rightIcon,
-  onRightIconPress,
-  style,
-  inputStyle,
+  secureTextEntry = false,
+  keyboardType = 'default',
   multiline = false,
+  numberOfLines = 4,
+  autoCapitalize = 'sentences',
+  icon = null,
+  rightIcon = null,
+  onRightIconPress = null,
+  style = {},
+  error = null
 }) => {
   return (
     <View style={[styles.container, style]}>
@@ -25,44 +26,47 @@ const Input = ({
       
       <View style={[
         styles.inputContainer, 
-        error && styles.inputError,
-        multiline && styles.multilineContainer
+        multiline && styles.multilineContainer,
+        error && styles.inputError
       ]}>
         {icon && (
           <Ionicons 
             name={icon} 
-            size={20} 
+            size={Theme.controlSizes.iconSize.small} 
             color={Theme.colors.textLight} 
-            style={styles.icon} 
+            style={styles.icon}
           />
         )}
         
-        <TextInput
-          style={[
-            styles.input, 
-            icon && styles.inputWithIcon,
-            rightIcon && styles.inputWithRightIcon,
-            multiline && styles.multilineInput,
-            inputStyle
-          ]}
+        <TextInput 
           value={value}
           onChangeText={onChangeText}
           placeholder={placeholder}
-          placeholderTextColor={Theme.colors.textLight}
+          placeholderTextColor={Theme.colors.disabled}
           secureTextEntry={secureTextEntry}
           keyboardType={keyboardType}
-          autoCapitalize={autoCapitalize}
           multiline={multiline}
+          numberOfLines={multiline ? numberOfLines : 1}
+          autoCapitalize={autoCapitalize}
+          style={[
+            styles.input, 
+            multiline && styles.multilineInput,
+            icon && styles.inputWithIcon,
+            rightIcon && styles.inputWithRightIcon
+          ]}
         />
         
         {rightIcon && (
-          <Ionicons
-            name={rightIcon}
-            size={20}
-            color={Theme.colors.textLight}
-            style={styles.rightIcon}
+          <TouchableOpacity 
             onPress={onRightIconPress}
-          />
+            style={styles.rightIcon}
+          >
+            <Ionicons 
+              name={rightIcon} 
+              size={Theme.controlSizes.iconSize.small} 
+              color={Theme.colors.textLight} 
+            />
+          </TouchableOpacity>
         )}
       </View>
       
@@ -74,6 +78,7 @@ const Input = ({
 const styles = StyleSheet.create({
   container: {
     marginBottom: Theme.spacing.md,
+    width: '100%',
   },
   label: {
     fontSize: Theme.fontSizes.sm,
@@ -88,9 +93,10 @@ const styles = StyleSheet.create({
     borderColor: Theme.colors.border,
     borderRadius: Theme.borderRadius.md,
     backgroundColor: Theme.colors.surface,
+    minHeight: Theme.controlSizes.inputHeight,
   },
   multilineContainer: {
-    minHeight: 100,
+    minHeight: scale(100),
     alignItems: 'flex-start',
   },
   input: {
@@ -99,10 +105,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: Theme.spacing.md,
     fontSize: Theme.fontSizes.md,
     color: Theme.colors.text,
+    minHeight: Theme.controlSizes.inputHeight,
   },
   multilineInput: {
     textAlignVertical: 'top',
-    minHeight: 100,
+    minHeight: scale(100),
   },
   inputWithIcon: {
     paddingLeft: 0,
