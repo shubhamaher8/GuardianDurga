@@ -287,11 +287,11 @@ const LocationSharingScreen = () => {
   };
   
   const stopSharing = async () => {
-    if (!activeSharingId) return;
+    if (!userId) return;
     
     try {
       setLoading(true);
-      await stopLocationSharing(activeSharingId);
+      await stopLocationSharing(userId);
       setIsSharing(false);
       setActiveSharingId(null);
       Alert.alert('Sharing Stopped', 'Your location is no longer being shared.');
@@ -332,7 +332,7 @@ const LocationSharingScreen = () => {
           
           // Update in database
           await updateSharedLocation(
-            sharingId, 
+            userId, 
             location.coords.latitude, 
             location.coords.longitude
           );

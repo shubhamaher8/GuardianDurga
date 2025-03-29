@@ -172,69 +172,25 @@ export const getActiveSOSAlerts = async (userId) => {
 };
 
 // Location Sharing Functions
-export const saveLocationSharing = async (userId, data) => {
-  // Prevent stack depth issues by using primitive data types instead of complex objects
-  // Use string-based approach for contact information
-  const contactIdsString = data.contacts.map(contact => contact.id).join(',');
-  const contactNamesString = data.contacts.map(contact => contact.name).join(',');
-  
-  // Get current time once to ensure consistency
-  const now = new Date();
-  const nowIso = now.toISOString();
-  const endTimeIso = calculateEndTime(data.duration).toISOString();
-  
-  // Create a simplified insert object with all required fields
-  const insertObject = { 
+export const saveLocationSharing = async (userId, locationData) => {
+  const insertObject = {
     user_id: userId,
-    contacts: null, // Set to null to avoid complex JSON storage
-    contact_ids_string: contactIdsString,
-    contact_names_string: contactNamesString,
-    contact_count: data.contacts.length, // Add count for simpler queries
-    duration: data.duration,
-    start_time: nowIso, // Ensure start_time is always set
-    end_time: endTimeIso,
+    latitude: locationData.latitude,
+    longitude: locationData.longitude,
     status: 'active',
-    latitude: data.latitude,
-    longitude: data.longitude,
-    created_at: nowIso,
-    updated_at: nowIso
+    created_at: new Date().toISOString()
   };
   
   try {
-    // Use a simpler query to avoid stack depth issues
     const { data: result, error } = await supabase
       .from('location_sharing')
       .insert([insertObject])
-      .select('id, status');
+      .select('user_id, latitude, longitude, status, created_at');
     
     if (error) throw error;
     return result;
   } catch (err) {
-    console.error('Supabase insert error:', err);
-    // If we still get errors, try an even more simplified approach
-    if (err.code === '54001' || err.code === '23502') {
-      // Ultra-simplified version with only essential fields
-      const nowRetry = new Date().toISOString(); // Get fresh timestamp
-      const { data: fallbackResult, error: fallbackError } = await supabase
-        .from('location_sharing')
-        .insert([{ 
-          user_id: userId,
-          contacts: null,
-          contact_count: data.contacts.length,
-          duration: data.duration,
-          start_time: nowRetry, // Explicitly set start_time to fix 23502 error
-          end_time: calculateEndTime(data.duration).toISOString(),
-          status: 'active',
-          latitude: data.latitude,
-          longitude: data.longitude,
-          created_at: nowRetry,
-          updated_at: nowRetry
-        }])
-        .select('id');
-      
-      if (fallbackError) throw fallbackError;
-      return fallbackResult;
-    }
+    console.error('Error sharing location:', err);
     throw err;
   }
 };
@@ -242,7 +198,7 @@ export const saveLocationSharing = async (userId, data) => {
 export const getActiveLocationSharing = async (userId) => {
   const { data, error } = await supabase
     .from('location_sharing')
-    .select('*')
+    .select('latitude, longitude, created_at')
     .eq('user_id', userId)
     .eq('status', 'active');
   
@@ -250,17 +206,14 @@ export const getActiveLocationSharing = async (userId) => {
   return data;
 };
 
-export const stopLocationSharing = async (sharingId) => {
+export const stopLocationSharing = async (userId) => {
   try {
     const { data, error } = await supabase
       .from('location_sharing')
-      .update({ 
-        status: 'stopped', 
-        updated_at: new Date().toISOString(),
-        end_time: new Date().toISOString()
-      })
-      .eq('id', sharingId)
-      .select('id');
+      .update({ status: 'stopped' })
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .select('user_id, status');
     
     if (error) throw error;
     return data;
@@ -270,17 +223,14 @@ export const stopLocationSharing = async (sharingId) => {
   }
 };
 
-export const updateSharedLocation = async (sharingId, latitude, longitude) => {
+export const updateSharedLocation = async (userId, latitude, longitude) => {
   try {
     const { data, error } = await supabase
       .from('location_sharing')
-      .update({ 
-        latitude, 
-        longitude, 
-        updated_at: new Date().toISOString() 
-      })
-      .eq('id', sharingId)
-      .select('id');
+      .update({ latitude, longitude })
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .select('user_id, latitude, longitude');
     
     if (error) throw error;
     return data;
