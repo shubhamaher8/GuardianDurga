@@ -1,184 +1,315 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
-import * as Contacts from 'expo-contacts';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, SafeAreaView, StatusBar, Alert, Linking } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { supabase } from '../../supabase';
+import { getEmergencyContacts, setPrimaryContact, deleteEmergencyContact } from '../utils/supabaseHelpers';
+import Theme from '../theme/theme';
+import { scale, wp, moderateScale, screenDimensions } from '../utils/responsive';
+import Card from '../components/Card';
+import Button from '../components/Button';
+import Header from '../components/Header';
 
 const EmergencyContactsScreen = ({ navigation }) => {
-  // State to store emergency contacts
-  const [emergencyContacts, setEmergencyContacts] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  // Fetch emergency contacts (mock data for now)
-  const fetchEmergencyContacts = async () => {
+  // Fetch user's emergency contacts
+  const fetchContacts = async () => {
+    setLoading(true);
     try {
-      const { status } = await Contacts.requestPermissionsAsync();
-      if (status === 'granted') {
-        const { data } = await Contacts.getContactsAsync({
-          fields: [Contacts.Fields.Name, Contacts.Fields.PhoneNumbers],
-        });
-        const formattedContacts = data.map(contact => ({
-          name: contact.name,
-          phone: contact.phoneNumbers ? contact.phoneNumbers[0].number : '',
-        }));
-        setEmergencyContacts(formattedContacts);
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      
+      if (userError) throw userError;
+      
+      if (userData?.user) {
+        const data = await getEmergencyContacts(userData.user.id);
+        setContacts(data || []);
       }
     } catch (error) {
       console.error('Error fetching contacts:', error);
+      Alert.alert('Error', 'Failed to load emergency contacts. Please try again.');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
     }
   };
 
-  // Add a mock contact for demonstration
-  const addMockContact = () => {
-    setEmergencyContacts([
-      ...emergencyContacts,
-      { name: 'New Contact', phone: 'XXXX XXXX XXXX' },
-    ]);
+  // Set/remove primary contact
+  const togglePrimaryContact = async (contactId, isPrimary) => {
+    try {
+      setLoading(true);
+      
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (isPrimary) {
+        // Set as primary
+        await setPrimaryContact(userData.user.id, contactId);
+      } else {
+        // Update the selected contact to not be primary
+        await supabase
+          .from('emergency_contacts')
+          .update({ is_primary: false, updated_at: new Date() })
+          .eq('id', contactId);
+      }
+      
+      // Refresh the contacts list
+      fetchContacts();
+      
+    } catch (error) {
+      console.error('Error updating contact:', error);
+      Alert.alert('Error', 'Failed to update contact. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.title}>EMERGENCY CONTACTS</Text>
-        <TouchableOpacity onPress={() => navigation.navigate('Settings')}>
-        </TouchableOpacity>
-      </View>
+  // Delete contact
+  const deleteContact = async (contactId) => {
+    Alert.alert(
+      'Delete Contact',
+      'Are you sure you want to delete this contact?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Delete', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              setLoading(true);
+              
+              await deleteEmergencyContact(contactId);
+              
+              // Refresh the contacts list
+              fetchContacts();
+              
+            } catch (error) {
+              console.error('Error deleting contact:', error);
+              Alert.alert('Error', 'Failed to delete contact. Please try again.');
+              setLoading(false);
+            }
+          }
+        }
+      ]
+    );
+  };
 
-      {/* Profile ID */}
-      <View style={styles.profileIdContainer}>
-        <Text style={styles.profileIdText}>Profile ID</Text>
-        <Text style={styles.profileIdNumber}>XXXX XXXX XX4473</Text>
-        <Text style={styles.verifiedText}>Verified</Text>
-      </View>
+  // Dial contact
+  const dialContact = (phoneNumber) => {
+    Linking.openURL(`tel:${phoneNumber}`);
+  };
 
-      {/* Contact List */}
-      <View style={styles.contactList}>
-        {emergencyContacts.map((contact, index) => (
-          <View key={index} style={styles.contactCard}>
-            <View style={styles.contactDetails}>
-              <Text style={styles.contactName}>{contact.name}</Text>
-              <Text style={styles.contactPhone}>XXXX XXXX XXXX</Text>
+  // Add confirmation before dialing
+  const confirmDialContact = (contact) => {
+    Alert.alert(
+      'Call Contact',
+      `Are you sure you want to call ${contact.name}? (${contact.phone})`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Call', onPress: () => dialContact(contact.phone), style: 'destructive' }
+      ],
+      { cancelable: true }
+    );
+  };
+
+  // Load contacts on mount and when navigating back to this screen
+  useEffect(() => {
+    fetchContacts();
+    
+    // Set up navigation focus listener
+    const unsubscribe = navigation.addListener('focus', () => {
+      fetchContacts();
+    });
+    
+    return unsubscribe;
+  }, [navigation]);
+
+  // Render each contact item
+  const renderContactItem = ({ item }) => (
+    <TouchableOpacity activeOpacity={0.7} onPress={() => confirmDialContact(item)}>
+      <Card
+        style={styles.contactCard}
+        elevation="sm"
+        padding={false}
+      >
+        <View style={styles.contactCardContent}>
+          <View style={styles.contactInfo}>
+            <View style={styles.nameContainer}>
+              <Text style={styles.contactName}>{item.name}</Text>
+              {item.is_primary && (
+                <View style={styles.primaryBadge}>
+                  <Text style={styles.primaryText}>Primary</Text>
+                </View>
+              )}
             </View>
-            <TouchableOpacity style={styles.editButton}>
-              <Text style={styles.editButtonText}>Edit</Text>
+            
+            <Text style={styles.contactPhone}>{item.phone}</Text>
+            {item.relationship && (
+              <Text style={styles.contactRelationship}>{item.relationship}</Text>
+            )}
+          </View>
+          
+          <View style={styles.contactActions}>
+            {!item.is_primary && (
+              <TouchableOpacity 
+                style={styles.actionButton}
+                onPress={() => togglePrimaryContact(item.id, true)}
+              >
+                <Ionicons name="star-outline" size={Theme.controlSizes.iconSize.small} color={Theme.colors.primary} />
+              </TouchableOpacity>
+            )}
+            
+            <TouchableOpacity 
+              style={styles.actionButton}
+              onPress={() => deleteContact(item.id)}
+            >
+              <Ionicons name="trash-outline" size={Theme.controlSizes.iconSize.small} color={Theme.colors.danger} />
             </TouchableOpacity>
           </View>
-        ))}
-      </View>
+        </View>
+      </Card>
+    </TouchableOpacity>
+  );
 
-      {/* Add Contacts */}
-      <TouchableOpacity style={styles.addContactButton} onPress={addMockContact}>
-        <Text style={styles.addContactText}>+ Add Contacts</Text>
-      </TouchableOpacity>
-
-      {/* AI Durga Button */}
-      <TouchableOpacity style={styles.aiDurgaButton} onPress={() => navigation.navigate('Chatbot')}>
-        <Text style={styles.aiDurgaText}>AI DURGA</Text>
-      </TouchableOpacity>
+  // Empty state when no contacts
+  const EmptyListComponent = () => (
+    <View style={styles.emptyContainer}>
+      <Ionicons 
+        name="people-outline" 
+        size={scale(64)} 
+        color={Theme.colors.textLight} 
+      />
+      <Text style={styles.emptyText}>No emergency contacts added yet</Text>
+      <Text style={styles.emptySubtext}>
+        Add contacts who can be reached in case of an emergency
+      </Text>
     </View>
+  );
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor={Theme.colors.background} />
+      
+      
+      <View style={styles.content}>
+        <FlatList
+          data={contacts}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderContactItem}
+          ListEmptyComponent={EmptyListComponent}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshing={refreshing}
+          onRefresh={() => {
+            setRefreshing(true);
+            fetchContacts();
+          }}
+        />
+      </View>
+      
+      <View style={styles.addButtonContainer}>
+        <Button
+          title="Add Emergency Contact"
+          leftIcon="add-circle-outline"
+          onPress={() => navigation.navigate('AddEmergencyContact')}
+          style={styles.addButton}
+        />
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9E79F',
-    padding: 20,
+    backgroundColor: Theme.colors.background,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
+  content: {
+    flex: 1,
+    padding: Theme.spacing.lg,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#000000',
-  },
-  settingsIcon: {
-    width: 30,
-    height: 30,
-  },
-  profileIdContainer: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 20,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  profileIdText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  profileIdNumber: {
-    fontSize: 14,
-  },
-  verifiedText: {
-    fontSize: 14,
-    color: '#008000',
-  },
-  contactList: {
-    marginBottom: 20,
+  listContent: {
+    flexGrow: 1,
+    paddingBottom: Theme.spacing.xxl,
   },
   contactCard: {
+    marginBottom: Theme.spacing.md,
+    borderRadius: Theme.borderRadius.md,
+  },
+  contactCardContent: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
+    padding: Theme.spacing.md,
   },
-  contactAvatar: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    marginRight: 10,
-  },
-  contactDetails: {
+  contactInfo: {
     flex: 1,
   },
+  nameContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Theme.spacing.xs,
+  },
   contactName: {
-    fontSize: 18,
+    fontSize: Theme.fontSizes.md,
     fontWeight: 'bold',
+    color: Theme.colors.text,
+    marginRight: Theme.spacing.sm,
+  },
+  primaryBadge: {
+    backgroundColor: `${Theme.colors.primary}20`,
+    paddingHorizontal: Theme.spacing.sm,
+    paddingVertical: Theme.spacing.xs / 2,
+    borderRadius: Theme.borderRadius.md,
+  },
+  primaryText: {
+    fontSize: Theme.fontSizes.xs,
+    color: Theme.colors.primary,
+    fontWeight: '500',
   },
   contactPhone: {
-    fontSize: 14,
+    fontSize: Theme.fontSizes.md,
+    color: Theme.colors.text,
+    marginBottom: Theme.spacing.xs,
   },
-  editButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 5,
-    backgroundColor: '#FFC107',
+  contactRelationship: {
+    fontSize: Theme.fontSizes.sm,
+    color: Theme.colors.textLight,
   },
-  editButtonText: {
-    fontSize: 14,
-    color: '#000000',
-  },
-  addContactButton: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 10,
-    padding: 10,
-    marginTop: 20,
+  contactActions: {
+    flexDirection: 'row',
     alignItems: 'center',
   },
-  addContactText: {
-    fontSize: 16,
-    fontWeight: 'bold',
+  actionButton: {
+    padding: Theme.spacing.sm,
+    marginLeft: Theme.spacing.xs,
   },
-  aiDurgaButton: {
-    position: 'absolute',
-    bottom: 20,
-    right: 20,
-    backgroundColor: '#FFC107',
-    borderRadius: 50,
-    padding: 10,
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Theme.spacing.xl,
   },
-  aiDurgaText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#000000',
+  emptyText: {
+    fontSize: Theme.fontSizes.lg,
+    fontWeight: '600',
+    color: Theme.colors.text,
+    marginTop: Theme.spacing.lg,
+    marginBottom: Theme.spacing.sm,
+    textAlign: 'center',
   },
+  emptySubtext: {
+    fontSize: Theme.fontSizes.md,
+    color: Theme.colors.textLight,
+    textAlign: 'center',
+  },
+  addButtonContainer: {
+    padding: Theme.spacing.lg,
+    paddingTop: 0,
+  },
+  addButton: {
+    backgroundColor: Theme.colors.primary,
+  }
 });
 
 export default EmergencyContactsScreen;
